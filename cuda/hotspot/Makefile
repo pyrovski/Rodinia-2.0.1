@@ -3,6 +3,7 @@ include ../../common/make.config
 SRC = hotspot.cu
 
 EXE = hotspot
+targets=$(EXE)
 
 $(EXE): $(SRC)
 	$(NVCC) $(SRC) -o $(EXE) -L$(CUDA_LIB_DIR) 

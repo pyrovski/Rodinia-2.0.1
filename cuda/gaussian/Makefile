@@ -1,14 +1,14 @@
 include ../../common/make.config
 
-CC := $(CUDA_DIR)/bin/nvcc
-
-INCLUDE := $(CUDA_DIR)/include
-
 SRC = gaussian.cu
 EXE = gaussian
+targets=$(EXE)
 
 release: $(SRC)
-	$(CC) $(SRC) -o $(EXE) -I$(INCLUDE) -L$(CUDA_LIB_DIR) 
+	$(NVCC) $(SRC) -o $(EXE) -L$(CUDA_LIB_DIR) 
 
 clean:
-	rm gaussian
+	rm -f gaussian
+
+install: $(targets)
+	install -m $(install_perms) -t $(CUDA_BIN_DIR) $(targets)
