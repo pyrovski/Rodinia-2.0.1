@@ -1,11 +1,5 @@
 include common/make.config
 
-RODINIA_BASE_DIR := $(shell pwd)
-
-CUDA_BIN_DIR := $(RODINIA_BASE_DIR)/bin/linux/cuda
-OMP_BIN_DIR := $(RODINIA_BASE_DIR)/bin/linux/omp
-OPENCL_BIN_DIR := $(RODINIA_BASE_DIR)/bin/linux/opencl
-
 all: CUDA OMP OPENCL
 
 CUDA: 
