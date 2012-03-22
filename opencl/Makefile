@@ -21,7 +21,7 @@ all:
 	$(MAKE) -C nn install
 	$(MAKE) -C heartwall install
 
-clean
+clean:
 	$(MAKE) -C backprop clean
 	$(MAKE) -C bfs clean
 	$(MAKE) -C cfd clean
