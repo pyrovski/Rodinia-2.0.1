@@ -1,6 +1,6 @@
-include ../../common/make.config
-
 targets=backprop
+
+include ../../common/make.config
 
 backprop: backprop.o facetrain.o imagenet.o backprop_cuda.o 
 	$(CC) $(CC_FLAGS) backprop.o facetrain.o imagenet.o backprop_cuda.o -o backprop -L$(CUDA_LIB_DIR) -lcuda -lcudart -lm
@@ -24,5 +24,5 @@ imagenet.o: imagenet.c backprop.h
 clean:
 	rm -f *.o *~ backprop backprop_cuda.linkinfo
 
-install:
+install: $(targets)
 	install -m $(install_perms) -t $(CUDA_BIN_DIR) $(targets)

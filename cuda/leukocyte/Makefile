@@ -1,8 +1,14 @@
+include common/make.config
+targets=CUDA/leukocyte
+
 all: CUDA/leukocyte 
 
 CUDA/leukocyte:
-	cd CUDA; make
+	make -C CUDA
 
 clean:
-	cd CUDA; make clean
+	make -C CUDA clean
 	rm -f meschach_lib/meschach.a
+
+install: $(targets)
+	install -m $(install_perms) -t $(CUDA_BIN_DIR) $(targets)

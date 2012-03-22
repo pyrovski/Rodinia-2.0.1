@@ -1,6 +1,9 @@
+include ../common/make.config
+
 OCL_DIRS  := backprop bfs cfd gaussian heartwall hotspot kmeans lavaMD leukocyte lud nn	nw srad streamcluster particlefilter pathfinder
 
 all:
+	mkdir -p $(OPENCL_BIN_DIR)
 	$(MAKE) -C backprop install
 	$(MAKE) -C bfs install
 	$(MAKE) -C cfd install

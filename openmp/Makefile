@@ -1,6 +1,9 @@
+include ../common/make.config
+
 OMP_DIRS  := backprop bfs cfd heartwall hotspot kmeans lavaMD leukocyte lud nn nw srad streamcluster particlefilter pathfinder mummergpu
 
 all:
+	mkdir -p $(OMP_BIN_DIR)
 	$(MAKE) -C  backprop install
 	$(MAKE) -C  bfs install
 	$(MAKE) -C  cfd install
