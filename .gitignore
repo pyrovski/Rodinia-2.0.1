@@ -1,0 +1,7 @@
+*.o
+*.zip
+.svn
+latex
+html
+*.old
+*.avi
