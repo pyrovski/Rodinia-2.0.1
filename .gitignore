@@ -5,3 +5,11 @@ latex
 html
 *.old
 *.avi
+*.Z
+*.dat
+*.in
+*~
+*.uu
+*.gz
+*.cache
+*.log
