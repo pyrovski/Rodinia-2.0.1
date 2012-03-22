@@ -14,3 +14,4 @@ html
 *.cache
 *.log
 *.pgm
+bin
