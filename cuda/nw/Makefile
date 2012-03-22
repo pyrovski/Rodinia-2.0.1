@@ -6,9 +6,9 @@ EXE = needle
 targets=$(EXE)
 
 $(EXE): $(SRC)
-	$(NVCC) $(SRC) -o $(EXE) -L$(CUDA_LIB_DIR) 
+	$(NVCC_LINK) $^ -o $@ 
 
-clean: $(SRC)
+clean:
 	rm -f $(EXE) $(EXE).linkinfo result.txt
 
 install: $(targets)

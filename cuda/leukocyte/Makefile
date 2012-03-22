@@ -4,10 +4,10 @@ targets=CUDA/leukocyte
 all: CUDA/leukocyte 
 
 CUDA/leukocyte:
-	make -C CUDA
+	$(MAKE) -C CUDA
 
 clean:
-	make -C CUDA clean
+	$(MAKE) -C CUDA clean
 	rm -f meschach_lib/meschach.a
 
 install: $(targets)

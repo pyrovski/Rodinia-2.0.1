@@ -6,7 +6,7 @@ EXE = bfs
 targets=$(EXE)
 
 $(EXE): $(SRC)
-	$(NVCC) $(SRC) -o $(EXE) -I$(INCLUDE) -L$(CUDA_LIB_DIR) 
+	$(NVCC_LINK) $^ -o $@
 
 clean: $(SRC)
 	rm -f $(EXE) $(EXE).linkinfo result.txt

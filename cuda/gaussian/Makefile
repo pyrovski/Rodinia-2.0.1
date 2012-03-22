@@ -4,8 +4,8 @@ SRC = gaussian.cu
 EXE = gaussian
 targets=$(EXE)
 
-release: $(SRC)
-	$(NVCC) $(SRC) -o $(EXE) -L$(CUDA_LIB_DIR) 
+$(EXE): $(SRC)
+	$(NVCC_LINK) $^ -o $@
 
 clean:
 	rm -f gaussian
