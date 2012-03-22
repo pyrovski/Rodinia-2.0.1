@@ -13,3 +13,4 @@ html
 *.gz
 *.cache
 *.log
+*.pgm
