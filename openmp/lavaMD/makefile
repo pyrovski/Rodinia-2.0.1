@@ -1,3 +1,4 @@
+include ../../common/make.config
 CC_LINK_FLAGS += -lm
 
 targets=lavaMD

@@ -1,24 +1,21 @@
-# Example
-# target: dependencies
-	# command 1
-	# command 2
-          # .
-          # .
-          # .
-	# command n
+include ../../../common/make.config
+CC_LINK_FLAGS += -lm
+
+targets=srad
 
 # link objects(binaries) together
-a.out:	main.o
-	gcc	main.o \
-			-lm -fopenmp -o srad
+srad:	main.o
+	$(CC) $(CC_FLAGS) $(OMP_FLAG) main.o $(CC_LINK_FLAGS) -o $@
 
 # compile main function file into object (binary)
 main.o: 	main.c \
-				define.c \
-				graphics.c
-	gcc	main.c \
-			-c -O3 -fopenmp
+	define.c \
+	graphics.c
+	$(CC) $(CC_FLAGS) $(OMP_FLAG) main.c -c
 
 # delete all object files
 clean:
-	rm *.o srad
+	rm -f *.o srad
+
+install: $(targets)
+	install -m $(install_perms) -t $(OMP_BIN_DIR) $(targets)
