@@ -1,10 +1,14 @@
-openmp: ex_particle_OPENMP_seq.c
-	gcc -lm -O3 -ffast-math -fopenmp ex_particle_OPENMP_seq.c -o particle_filter
+include ../../common/make.config
+targets=particle_filter
 
+CC_FLAGS += -ffast-math
+CC_LINK_FLAGS += -lm
 
-icc_openmp: ex_particle_OPENMP_seq.c
-	icc -O3 -fast -openmp ex_particle_OPENMP_seq.c -o particle_filter
-
+particle_filter: ex_particle_OPENMP_seq.c
+	$(CC_OMP_LINK) $^ -o $@
 
 clean:
-	rm particle_filter
+	rm -f particle_filter
+
+install: $(targets)
+	install -m $(install_perms) -t $(OMP_BIN_DIR) $(targets)
