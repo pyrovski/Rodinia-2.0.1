@@ -1,14 +1,13 @@
 include ../../common/make.config
 
-#C compiler
-CC = g++
-
-CC_FLAGS = -g -O3 -Wall
-
 EXE = nw
+targets=$(EXE)
 
-$(EXE): nw.c
-	$(CC) $(CC_FLAGS) -o $(EXE) nw.c -I$(OPENCL_INC) -L$(OPENCL_LIB) -lOpenCL
+$(EXE): nw.cpp
+	$(OCL_LINK) $^ -o $@
 
 clean:
 	rm -f $(EXE)
+
+install: $(targets)
+	install -m $(install_perms) -t $(OCL_BIN_DIR) $(targets)
