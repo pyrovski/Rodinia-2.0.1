@@ -1,15 +1,14 @@
-CC = g++
+include ../../common/make.config
+CC = $(CXX)
 SRC = pathfinder.cpp
 EXE = pathfinder
-FLAGS = -fopenmp
+targets=$(EXE)
 
-release:
-	$(CC) $(SRC) $(FLAGS) -o $(EXE)
-
-debug:
-	$(CC) $(SRC) -g -Wall -o $(EXE)
+$(EXE): $(SRC)
+	$(CC_OMP_LINK) $^ -o $@
 
 clean:
 	rm -f pathfinder
 
-
+install: $(targets)
+	install -m $(install_perms) -t $(OMP_BIN_DIR) $(targets)
