@@ -1,8 +1,10 @@
 all: OpenCL/leukocyte 
 
 OpenCL/leukocyte:
-	cd OpenCL; make
+	$(MAKE) -C OpenCL install
 
 clean:
-	cd OpenCL; make clean
+	$(MAKE) -C OpenCL clean
 	rm -f meschach_lib/meschach.a
+
+install: all

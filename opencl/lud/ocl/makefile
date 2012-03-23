@@ -1,16 +1,14 @@
 include ../../../common/make.config
 
-INC = -I$(OPENCL_INC) -I../common
-LIB = -L$(OPENCL_LIB)
-
-#C compiler
-CC = g++
-CC_FLAGS = -g -O3 -Wall
-
 EXE = lud
+targets=$(EXE)
+CC_FLAGS += -I../common
 
-$(EXE): lud.cpp
-	$(CC) $(CC_FLAGS) -o $(EXE) lud.cpp ../common/common.c $(INC) $(LIB) -lOpenCL
+$(EXE): lud.cpp ../common/common.c
+	$(OCL_LINK) -o $@ $^ 
 
 clean:
 	rm -f $(EXE)
+
+install: $(targets)
+	install -m $(install_perms) -t $(OCL_BIN_DIR) $(targets)

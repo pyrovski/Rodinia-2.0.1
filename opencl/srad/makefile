@@ -6,3 +6,6 @@ srad: $(wildcard *.cpp)
 
 clean:
 	@rm -f srad *.o *.out *~ *\#
+
+install: $(targets)
+	install -m $(install_perms) -t $(OCL_BIN_DIR) $(targets)

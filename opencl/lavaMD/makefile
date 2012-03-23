@@ -7,8 +7,7 @@ lavaMD:	main.o \
 	./util/num/num.o \
 	./util/timer/timer.o \
 	./util/opencl/opencl.o
-	$(OCL_LINK) $^\
-	-o $@
+	$(OCL_LINK) $^ -o $@
 
 # compile function files into objects
 main.o:	main.h \

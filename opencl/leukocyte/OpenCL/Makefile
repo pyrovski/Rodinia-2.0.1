@@ -1,25 +1,17 @@
 include ../../../common/make.config
 
-# OpenCL SDK installation path      
-#AMD_OPENCL_DIR = /home/mwb7w/AMD-APP-SDK-v2.5-TC1-lnx64/
-
-# OpenCL include and library paths
-#OPENCL_INC = $(AMD_OPENCL_DIR)/include
-#OPENCL_LIB = $(AMD_OPENCL_DIR)/lib/x86_64
-
 # Matrix library path
 MATRIX_DIR = ../meschach_lib
 
-# C compiler
-CC = gcc
-CC_FLAGS = -g -O3 -Wall -I$(MATRIX_DIR) -I$(OPENCL_INC)
-
+CC_FLAGS += -I$(MATRIX_DIR)
+CC_LINK_FLAGS += -lm
+targets=leukocyte
 
 leukocyte: detect_main.o avilib.o find_ellipse.o find_ellipse_opencl.o track_ellipse.o track_ellipse_opencl.o misc_math.o OpenCL_helper_library.o $(MATRIX_DIR)/meschach.a
-	$(CC) $(CC_FLAGS) -lm avilib.o find_ellipse.o find_ellipse_opencl.o track_ellipse.o track_ellipse_opencl.o misc_math.o OpenCL_helper_library.o detect_main.o -o leukocyte $(MATRIX_DIR)/meschach.a -L$(OPENCL_LIB) -lm -lOpenCL
+	$(OCL_LINK) $^ -o $@  
 
 %.o: %.[ch]
-	$(CC) $(CC_FLAGS) $< -c
+	$(OCL_OBJ) $< -c
 
 detect_main.o: detect_main.c find_ellipse.h track_ellipse.h avilib.h
 
@@ -32,3 +24,6 @@ $(MATRIX_DIR)/meschach.a:
 
 clean:
 	rm -f *.o *~ leukocyte
+
+install: $(targets)
+	install -m $(install_perms) -t $(OCL_BIN_DIR) $(targets)

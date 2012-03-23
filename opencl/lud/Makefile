@@ -1,7 +1,8 @@
 all: lud
 
 lud:
-	cd ocl; make
-
+	$(MAKE) -C ocl install
 clean:
-	cd ocl; make clean
+	$(MAKE) -C ocl clean
+
+install: all
