@@ -1,9 +1,13 @@
-# C compiler
-CC = g++
-CC_FLAGS = -g -fopenmp 
+include ../../common/make.config
+targets=needle
+CC=$(CXX)
 
-needle: 
-	$(CC) $(CC_FLAGS) needle.cpp -o needle 
+needle: needle.cpp
+	$(CC_OMP_LINK) -o $@ $<
 
 clean:
-	rm -f needle 
+	rm -f needle
+
+install: $(targets)
+	install -m $(install_perms) -t $(OMP_BIN_DIR) $(targets)
+
