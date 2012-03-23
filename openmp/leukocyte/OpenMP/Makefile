@@ -1,13 +1,14 @@
-# C compiler
-CC = gcc
-CC_FLAGS = -g -O3 -Wall -fopenmp -I$(MATRIX_DIR)
+include ../../../common/make.config
+
+CC_FLAGS += -I$(MATRIX_DIR)
+CC_LINK_FLAGS += -lm
+targets=leukocyte
 
 # Matrix library path
 MATRIX_DIR = ../meschach_lib
 
-
 leukocyte: detect_main.o avilib.o find_ellipse.o track_ellipse.o misc_math.o $(MATRIX_DIR)/meschach.a
-	$(CC) $(CC_FLAGS) -lm avilib.o find_ellipse.o track_ellipse.o misc_math.o detect_main.o -o leukocyte -lm $(MATRIX_DIR)/meschach.a -lpthread
+	$(CC_OMP_LINK) $^ -o $@
 
 %.o: %.[ch]
 	$(CC) $(CC_FLAGS) $< -c
@@ -21,3 +22,6 @@ $(MATRIX_DIR)/meschach.a:
 
 clean:
 	rm -f *.o leukocyte
+
+install: $(targets)
+	install -m $(install_perms) -t $(OMP_BIN_DIR) $(targets)

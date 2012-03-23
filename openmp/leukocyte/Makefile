@@ -1,8 +1,10 @@
 all: OpenMP/leukocyte
 
 OpenMP/leukocyte:
-	cd OpenMP; make
+	$(MAKE) -C OpenMP install
 
 clean:
-	cd OpenMP; make clean
+	$(MAKE) -C OpenMP clean
 	rm -f meschach_lib/meschach.a
+
+install: all
