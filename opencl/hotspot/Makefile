@@ -3,7 +3,7 @@ EXE = hotspot
 targets=$(EXE)
 
 $(EXE): hotspot.c hotspot.h OpenCL_helper_library.c OpenCL_helper_library.h
-	$(OCL_LINK) $^ -o $@
+	$(OCL_LINK) $(^:%.h=) -o $@
 
 clean:
 	rm -f $(EXE)
