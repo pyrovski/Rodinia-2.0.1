@@ -1,23 +1,10 @@
-CC = gcc
-NVCC = nvcc
+include ../../../common/make.config
 
-DEFS += \
-		-DGPU_TIMER \
-		$(SPACE)
+NVCC_FLAGS += -use_fast_math -I../common
 
-NVCCFLAGS += -I../common \
-			 -O3 \
-			 -use_fast_math \
-			 -arch=sm_13 \
-			 -lm \
-			 $(SPACE)
+DEFS += -DGPU_TIMER 
 
-CFLAGS += -I../common \
-					-I/usr/include/cuda \
-		  -O3 \
-		  -Wall \
-		  $(SPACE)
-
+CC_FLAGS += -I../common -Wall $(DEFS) 
 # Add source files here
 EXECUTABLE  := lud_cuda
 # Cuda source files (compiled with cudacc)
@@ -25,20 +12,25 @@ CUFILES     := lud_kernel.cu
 # C/C++ source files (compiled with gcc / c++)
 CCFILES     := lud.c lud_cuda.c ../common/common.c
 
+targets=$(EXECUTABLE)
+
 OBJS = ../common/common.o lud.o lud_kernel.o
 
 .PHONY: all clean 
 all : $(EXECUTABLE)
 
 .c.o : 
-	$(NVCC) $(NVCCFLAGS) $(DEFS) -o $@ -c $<
+	$(NVCC_OBJ) -o $@ -c $<
 
 %.o:	%.cu 
-	$(NVCC) $(NVCCFLAGS) $(DEFS) -o $@ -c $<
+	$(NVCC_OBJ) -o $@ -c $<
 
 
 $(EXECUTABLE) : $(OBJS)
-	$(NVCC) $(NVCCFLAGS) -o $@  $?
+	$(NVCC_LINK) -o $@  $?
 
 clean:
 	rm -f $(EXECUTABLE) $(OBJS) *.linkinfo
+
+install: $(targets)
+	install -m $(install_perms) -t $(CUDA_BIN_DIR) $(targets)

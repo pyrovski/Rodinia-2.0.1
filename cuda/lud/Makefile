@@ -1,7 +1,9 @@
 all: lud_cuda 
 
 lud_cuda:
-	cd cuda; make
+	$(MAKE) -C cuda install
 
 clean:
-	cd cuda; make clean
+	$(MAKE) -C cuda clean
+
+install: all
