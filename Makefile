@@ -25,5 +25,5 @@ OMP_clean:
 	$(MAKE) -C openmp clean
 
 OCL_clean:
-	rm -f $(OPENCL_BIN_DIR)/*
+	rm -f $(OCL_BIN_DIR)/*
 	$(MAKE) -C opencl clean
