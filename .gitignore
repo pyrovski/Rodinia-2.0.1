@@ -15,3 +15,7 @@ html
 *.log
 *.pgm
 bin
+localConfig
+nn_cuda.cu.cpp
+*.db
+TAGS
