@@ -472,7 +472,8 @@ cl_mem _clCreateAndCpyPinnedMem(int size, float* h_mem_source) throw(string){
 		throw(string("excpetion in _clCreateAndCpyMem() -> clEnqueueMapBuffer"));
 	#endif
 	int element_number = size/sizeof(float);
-	#pragma omp parallel for
+	//#pragma omp parallel for
+	#warning why not use memcpy here?
 	for(int i=0;i<element_number;i++){
 		h_mem_pinned[i] = h_mem_source[i];
 	}

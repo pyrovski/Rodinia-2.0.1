@@ -35,7 +35,7 @@ template<typename datatype>
 void verify_array(const datatype *cpuResults, const datatype *gpuResults, const int size){
 
     bool passed = true; 
-#pragma omp parallel for
+    //#pragma omp parallel for
     for (int i=0; i<size; i++){
       if (fabs(cpuResults[i] - gpuResults[i]) / cpuResults[i] > MAX_RELATIVE_ERROR){
          passed = false; 
