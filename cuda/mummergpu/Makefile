@@ -1,8 +1,9 @@
 all: mummer 
 
 mummer:
-	cd src; make
+	$(MAKE) -C src install
 
 clean:
-	cd src; make clean
-	
+	$(MAKE) -C src clean
+
+install: all

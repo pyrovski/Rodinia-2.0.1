@@ -90,7 +90,7 @@ static const int maxdim = 4096;
 /// getRef
 //////////////////////////////////
 
-char getRef(int refpos, char* ref)
+static char getRef(int refpos, char* ref)
 {
 	return ref[refpos];
 }
