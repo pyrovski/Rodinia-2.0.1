@@ -1,7 +1,10 @@
 all: lud_omp 
 
 lud_omp:
-	cd omp; make
+	$(MAKE) -C omp install
 
 clean:
-	cd omp; make clean
+	$(MAKE) -C omp clean
+
+install:all
+

@@ -1,7 +1,7 @@
-LOCAL_CC = gcc -g -O3 -Wall
-CC = gcc
-CFLAGS = -lm -fopenmp -Wall
-
+include ../../common/make.config
+CC_FLAGS += -Wall
+CC_LINK_FLAGS += -lm
+targets=nn
 
 all : nn
 
@@ -9,8 +9,10 @@ clean :
 	rm -rf *.o nn
 
 nn : nn_openmp.c
-	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+	$(CC_OMP_LINK) -o $@ $<
 
 hurricane_gen : hurricane_gen.c
-	$(LOCAL_CC) -o $@ $< -lm
+	$(CC_OMP_LINK) -o $@ $<
 
+install: $(targets)
+	install -m $(install_perms) -t $(OMP_BIN_DIR) $(targets)

@@ -1,6 +1,8 @@
+include ../../../common/make.config
 # Makefile for LU Decomposition
 #
 #
+
 
 # DEBUG can be set to YES to include debugging info, or NO otherwise
 DEBUG          := YES
@@ -10,6 +12,7 @@ PROFILE        := NO
 
 # ------------  name of the executable  ----------------------------------------
 EXECUTABLE      := lud_omp
+targets=$(EXECUTABLE)
 
 # ------------  list of all source files  --------------------------------------
 SOURCES         := lud.c lud_omp.c ../common/common.c 
@@ -116,3 +119,6 @@ clean:
 
 # ==============================================================================
 # vim: set tabstop=2: set shiftwidth=2:
+
+install: $(targets)
+	install -m $(install_perms) -t $(OMP_BIN_DIR) $(targets)
