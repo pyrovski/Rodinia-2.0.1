@@ -2,12 +2,9 @@ include ../../common/make.config
 targets=pathfinder
 
 # link objects(binaries) together
-pathfinder: main.o OpenCL.o
+pathfinder: main.cpp OpenCL.cpp
 	$(OCL_LINK) $^ -o $@
 
-# compile main function file into object (binary)
-main.o: main.cpp OpenCL.cpp kernels.cl
-	$(OCL_LINK) main.cpp OpenCL.cpp -o $@
 
 clean:
 	@rm -f pathfinder *.o *.out *~ *\#
