@@ -1,17 +1,12 @@
 include ../../common/make.config
-
-# OpenCL installation path      
-# OPENCL_DIR = /home/mwb7w/NVIDIA_GPU_Computing_SDK/
-# OPENCL_DIR = /home/mwb7w/ati-stream-sdk-v2.2-lnx64/
-
-
-CC = gcc
-CC_FLAGS = -g -O3 -Wall
-
 EXE = hotspot
+targets=$(EXE)
 
 $(EXE): hotspot.c hotspot.h OpenCL_helper_library.c OpenCL_helper_library.h
-	$(CC) $(CC_FLAGS) -o $(EXE) -I$(OPENCL_INC) OpenCL_helper_library.c hotspot.c -L$(OPENCL_LIB) -lOpenCL
+	$(OCL_LINK) $^ -o $@
 
 clean:
 	rm -f $(EXE)
+
+install: $(targets)
+	install -m $(install_perms) -t $(OCL_BIN_DIR) $(targets)

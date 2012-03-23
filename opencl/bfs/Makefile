@@ -6,6 +6,7 @@ CC = $(CXX)
 SRC = bfs.cpp timer.cc
 
 EXE = bfs
+targets=$(EXE)
 
 $(EXE):$(SRC)
 	$(OCL_LINK) $^ -o $@
@@ -26,4 +27,4 @@ clean:
 	rm -f $(EXE) $(EXE).linkinfo result*
 
 install: $(targets)
-	install -m $(install_perms) -t $(OMP_BIN_DIR) $(targets)
+	install -m $(install_perms) -t $(OCL_BIN_DIR) $(targets)

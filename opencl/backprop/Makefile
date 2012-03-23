@@ -23,4 +23,4 @@ clean:
 	rm -f *.o *~ backprop *.linkinfo
 
 install: $(targets)
-	install -m $(install_perms) -t $(OMP_BIN_DIR) $(targets)
+	install -m $(install_perms) -t $(OCL_BIN_DIR) $(targets)
