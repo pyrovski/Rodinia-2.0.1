@@ -1,16 +1,12 @@
 include ../../../common/make.config
+targets=$(BINDIR)/mummergpu
 
-all: mummergpu
+all: $(targets)
 .SUFFIXES : .cu .cu_dbg_o .c_dbg_o .cpp_dbg_o .cu_rel_o .c_rel_o .cpp_rel_o .cubin
 
 include ../experiments/test_rule.mk
 
-CUDA_INSTALL_PATH := $(CUDA_DIR)
-
-# Compilers
-NVCC       := $(CUDA_INSTALL_PATH)/bin/nvcc 
 CXX        := g++ -fopenmp $(PROFILE)
-CC         := gcc 
 LINK       := g++ -fopenmp -m64 -fPIC $(PROFILE)
 
 # Add source files here
@@ -72,29 +68,6 @@ CFLAGS    := -m64 $(CWARN_FLAGS)
 COMMONFLAGS ?= 
 COMMONFLAGS += $(INCLUDES) -DUNIX
 
-# Debug/release configuration
-ifeq ($(dbg),1)
-	COMMONFLAGS += -g
-	NVCCFLAGS   += -D_DEBUG
-	BINSUBDIR   := debug
-	LIBSUFFIX   := D
-else 
-	COMMONFLAGS += -O3
-	BINSUBDIR   := release
-	LIBSUFFIX   :=
-endif
-
-# Device emulation configuration
-ifeq ($(emu), 1)
-	NVCCFLAGS   += -deviceemu
-	CUDACCFLAGS += 
-	BINSUBDIR   := emu$(BINSUBDIR)
-endif
-
-ifeq ($(fastmath), 1)
-	NVCCFLAGS += -use_fast_math
-endif
-
 # Add cudacc flags
 NVCCFLAGS += -Xcompiler "$(CUDACCFLAGS)"
 
@@ -144,7 +117,6 @@ BINOBJS= \
 
 $(BINDIR)/mummergpu: makedirectories $(LIBDIR)/libmummergpu$(LIBSUFFIX).a $(BINOBJS)
 	$(LINK) -o $(BINDIR)/$(BINNAME)  $(BINOBJS) -lmummergpu$(LIBSUFFIX) $(LIB) 
-		
 
 ##############################################################################
 #                               Auto Generated rules go here                 #
@@ -173,3 +145,5 @@ cubin: mummergpu.cubin
 
 ptx: mummergpu.ptx
 
+install: $(targets)
+	install -m $(install_perms) -t $(CUDA_BIN_DIR) $(targets)

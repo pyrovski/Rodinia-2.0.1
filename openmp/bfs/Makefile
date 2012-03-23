@@ -1,9 +1,13 @@
-# C compiler
-CC = g++
-CC_FLAGS = -g -fopenmp -O2
+include ../../common/make.config
+targets=bfs
 
-bfs: 
-	$(CC) $(CC_FLAGS) bfs.cpp -o bfs 
+CC=g++
+
+bfs: bfs.cpp
+	$(CC_OMP_LINK) $^ -o $@
 
 clean:
-	rm -f bfs result.txt
+	rm -f $(targets) result.txt
+
+install: $(targets)
+	install -m $(install_perms) -t $(OMP_BIN_DIR) $(targets)
