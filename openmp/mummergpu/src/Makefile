@@ -1,5 +1,5 @@
 include ../../../common/make.config
-
+targets=$(BINDIR)/mummergpu
 all: mummergpu
 .SUFFIXES : .cu .cu_dbg_o .c_dbg_o .cpp_dbg_o .cu_rel_o .c_rel_o .cpp_rel_o .cubin
 
@@ -144,7 +144,6 @@ BINOBJS= \
 
 $(BINDIR)/mummergpu: makedirectories $(LIBDIR)/libmummergpu$(LIBSUFFIX).a $(BINOBJS)
 	$(LINK) -o $(BINDIR)/$(BINNAME)  $(BINOBJS) -lmummergpu$(LIBSUFFIX) $(LIB) 
-		
 
 ##############################################################################
 #                               Auto Generated rules go here                 #
@@ -173,3 +172,5 @@ cubin: mummergpu.cubin
 
 ptx: mummergpu.ptx
 
+install: $(targets)
+	install -m $(install_perms) -t $(OMP_BIN_DIR) $(targets)
