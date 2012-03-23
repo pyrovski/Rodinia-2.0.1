@@ -98,7 +98,7 @@ float *feature_d;
 float *clusters_d;
 float *center_d;
 
-int allocate(int n_points, int n_features, int n_clusters, float **feature)
+extern "C" int allocate(int n_points, int n_features, int n_clusters, float **feature)
 {
 
 	int sourcesize = 1024*1024;
