@@ -1,24 +1,17 @@
-# C compiler
-CC = gcc
-CC_FLAGS = -g -fopenmp -O2 
+include ../../../common/make.config
+targets=kmeans
 
 kmeans: cluster.o getopt.o kmeans.o kmeans_clustering.o 
-	$(CC) $(CC_FLAGS) cluster.o getopt.o kmeans.o kmeans_clustering.o  -o kmeans
+	$(CC_OMP_LINK) -o $@ $^
 
 %.o: %.[ch]
-	$(CC) $(CC_FLAGS) $< -c
-
-cluster.o: cluster.c 
-	$(CC) $(CC_FLAGS) cluster.c -c
-	
-getopt.o: getopt.c 
-	$(CC) $(CC_FLAGS) getopt.c -c
-	
-kmeans.o: kmeans.c 
-	$(CC) $(CC_FLAGS) kmeans.c -c
+	$(CC_OMP) $< -c
 
 kmeans_clustering.o: kmeans_clustering.c kmeans.h
-	$(CC) $(CC_FLAGS) kmeans_clustering.c -c
+	$(CC_OMP) $< -c kmeans_clustering.c -c
 
 clean:
 	rm -f *.o *~ kmeans 
+
+install: $(targets)
+	install -m $(install_perms) -t $(OMP_BIN_DIR) $(targets)

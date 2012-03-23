@@ -1,12 +1,13 @@
 all: OPENMP/kmeans SERIAL/kmeans
 
 OPENMP/kmeans:
-	cd kmeans_openmp; make
-	
+	$(MAKE) -C kmeans_openmp install
+
 SERIAL/kmeans:
-	cd kmeans_serial; make
+	$(MAKE) -C kmeans_serial install
 
 clean:
-	cd kmeans_serial; make clean
-	cd kmeans_openmp; make clean
-	
+	$(MAKE) -C kmeans_serial clean
+	$(MAKE) -C kmeans_openmp clean
+
+install: all

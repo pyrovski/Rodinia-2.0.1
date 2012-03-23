@@ -8,12 +8,8 @@ lavaMD:	main.o \
 	./kernel/kernel_cpu.o \
 	./util/num/num.o \
 	./util/timer/timer.o
-	$(CC)	main.o \
-	./kernel/kernel_cpu.o \
-	./util/num/num.o \
-	./util/timer/timer.o \
-	$(CC_LINK_FLAGS) \
-	-o lavaMD
+	$(CC_OMP_LINK)	$^ -o $@
+
 # compile function files into objects (binaries)
 main.o:	main.h \
 	main.c \
@@ -23,32 +19,18 @@ main.o:	main.h \
 	./util/num/num.c \
 	./util/timer/timer.h \
 	./util/timer/timer.c
-	$(CC)	main.c \
-	-c \
-	-o main.o \
-	$(CC_FLAGS)
+	$(CC_OMP) main.c -c
 
-./kernel/kernel_cpu.o:	./kernel/kernel_cpu.h \
-	./kernel/kernel_cpu.c
-	$(CC)	./kernel/kernel_cpu.c \
-	-c \
-	-o ./kernel/kernel_cpu.o \
-	$(CC_FLAGS)\
-	$(OMP_FLAG)
+kernel/kernel_cpu.o: kernel/kernel_cpu.h kernel/kernel_cpu.c
+	$(CC_OMP) kernel/kernel_cpu.c -c -o $@
 
-./util/num/num.o:	./util/num/num.h \
+util/num/num.o:	./util/num/num.h \
 	./util/num/num.c
-	$(CC)	./util/num/num.c \
-	-c \
-	-o ./util/num/num.o \
-	$(CC_FLAGS)
+	$(CC_OMP)	./util/num/num.c -c -o $@
 
-./util/timer/timer.o:	./util/timer/timer.h \
+util/timer/timer.o:	./util/timer/timer.h \
 	./util/timer/timer.c
-	$(CC)	./util/timer/timer.c \
-	-c \
-	-o ./util/timer/timer.o \
-	$(CC_FLAGS)
+	$(CC_OMP) ./util/timer/timer.c -c -o $@
 
 # delete all object and executable files
 clean:

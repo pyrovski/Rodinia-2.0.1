@@ -1,9 +1,12 @@
-# C compiler
-CC = g++
-CC_FLAGS = -g -fopenmp -O2
+include ../../common/make.config
+CC=g++
+targets=hotspot
 
-hotspot: 
-	$(CC) $(CC_FLAGS) hotspot_openmp.cpp -o hotspot 
+hotspot: hotspot_openmp.cpp
+	$(CC_OMP_LINK) -o $@ $^
 
 clean:
 	rm -f hotspot
+
+install: $(targets)
+	install -m $(install_perms) -t $(OMP_BIN_DIR) $(targets)
