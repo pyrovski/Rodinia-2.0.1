@@ -1,7 +1,6 @@
 include ../../common/make.config
 targets=backprop
 
-CC_FLAGS += -I.
 CC_LINK_FLAGS += -lm
 
 backprop: backprop.o facetrain.o imagenet.o backprop_cuda.o 
