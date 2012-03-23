@@ -1,16 +1,15 @@
 include ../../common/make.config
 
-#C compiler
-CC = g++
-
 SRC = nearestNeighbor.cpp clutils.cpp utils.cpp
 
-CC_FLAGS = -g -O3
-
 EXE = nn
+targets=nn
 
-release:
-	$(CC) $(CC_FLAGS) -lOpenCL  -fopenmp $(SRC) -o $(EXE) -I$(OPENCL_INC) -L$(OPENCL_LIB)
-	
+$(EXE): $(SRC)
+	$(OCL_LINK) $^ -o $@
+
 clean: 
 	rm -f $(EXE) 
+
+install: $(targets)
+	install -m $(install_perms) -t $(OCL_BIN_DIR) $(targets)

@@ -1,15 +1,12 @@
 include ../../common/make.config
 targets=heartwall
 
-CC=g++
-
 # link objects(binaries) together
-heartwall: main.o OpenCL.o avilib.o avimod.o
+heartwall: main.cpp OpenCL.cpp avilib.c avimod.c
 	$(OCL_LINK) $^ -o $@
-
-# compile main function file into object (binary)
-main.o: main.cpp OpenCL.cpp kernels.cl avilib.c avimod.c
-	$(OCL_OBJ) -o $@ $^
 
 clean:
 	@rm -f *.o *.out *~ *\#
+
+install: $(targets)
+	install -m $(install_perms) -t $(OCL_BIN_DIR) $(targets)
