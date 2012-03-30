@@ -36,7 +36,7 @@ static struct option long_options[] = {
 };
 
 extern void
-lud_omp(float *m, int matrix_dim);
+lud_openacc(float *matrix, int matrix_dim);
 
 int
 main ( int argc, char *argv[] )
@@ -45,7 +45,7 @@ main ( int argc, char *argv[] )
   int opt, option_index=0;
   func_ret_t ret;
   const char *input_file = NULL;
-  float *m, *mm;
+  float *matrix, *matrix_copy;
   stopwatch sw;
 
   while ((opt = getopt_long(argc, argv, "::vs:i:n:", 
@@ -85,9 +85,9 @@ main ( int argc, char *argv[] )
 
   if (input_file) {
     printf("Reading matrix from file %s\n", input_file);
-    ret = create_matrix_from_file(&m, input_file, &matrix_dim);
+    ret = create_matrix_from_file(&matrix, input_file, &matrix_dim);
     if (ret != RET_SUCCESS) {
-      m = NULL;
+      matrix = NULL;
       fprintf(stderr, "error create matrix from file %s\n", input_file);
       exit(EXIT_FAILURE);
     }
@@ -98,24 +98,24 @@ main ( int argc, char *argv[] )
 
   if (do_verify){
     printf("Before LUD\n");
-    print_matrix(m, matrix_dim);
-    matrix_duplicate(m, &mm, matrix_dim);
+    print_matrix(matrix, matrix_dim);
+    matrix_duplicate(matrix, &matrix_copy, matrix_dim);
   }
 
   stopwatch_start(&sw);
-  lud_omp(m, matrix_dim);
+  lud_openacc(matrix, matrix_dim);
   stopwatch_stop(&sw);
   printf("Time consumed(ms): %lf\n", 1000*get_interval_by_sec(&sw));
 
   if (do_verify){
     printf("After LUD\n");
-    print_matrix(m, matrix_dim);
+    print_matrix(matrix, matrix_dim);
     printf(">>>Verify<<<<\n");
-    lud_verify(mm, m, matrix_dim); 
-    free(mm);
+    lud_verify(matrix_copy, matrix, matrix_dim); 
+    free(matrix_copy);
   }
 
-  free(m);
+  free(matrix);
 
   return EXIT_SUCCESS;
 }				/* ----------  end of function main  ---------- */
