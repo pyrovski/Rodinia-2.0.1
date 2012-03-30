@@ -22,6 +22,8 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include <openacc.h>
+
 #include "common.h"
 
 static int do_verify = 0;
@@ -102,6 +104,7 @@ main ( int argc, char *argv[] )
     matrix_duplicate(matrix, &matrix_copy, matrix_dim);
   }
 
+  acc_init(acc_device_nvidia);
   stopwatch_start(&sw);
   lud_openacc(matrix, matrix_dim);
   stopwatch_stop(&sw);
