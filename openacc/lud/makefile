@@ -5,7 +5,7 @@ targets=$(EXECUTABLE)
 
 SOURCES         := lud.c lud_openacc.c common/common.c 
 
-CC_FLAGS += -Icommon
+OPENACC_FLAGS += -Icommon
 
 BASENAMES       = $(basename $(SOURCES))
 
