@@ -19,3 +19,9 @@ localConfig
 nn_cuda.cu.cpp
 *.db
 TAGS
+*.orig
+data
+*.out
+*.a
+out
+
