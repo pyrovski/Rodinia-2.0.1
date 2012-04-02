@@ -14,7 +14,7 @@
 // matches on the patch from the root to the node
 
 #define OMP
-#define N_THREADS 8
+#define N_THREADS 4
 
 
 static const int maxdim = 4096;
