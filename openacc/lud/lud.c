@@ -145,7 +145,8 @@ main ( int argc, char *argv[] )
     status = culaInitialize();
     checkStatus(status);
     stopwatch_start(&sw);
-    lud_cula(matrix, matrix_dim, ipiv);
+    status = lud_cula(matrix, matrix_dim, ipiv);
+    checkStatus(status);
   } else {
     acc_init(acc_device_nvidia);
     stopwatch_start(&sw);
