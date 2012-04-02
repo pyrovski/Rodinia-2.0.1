@@ -1,0 +1,1 @@
+../../../cuda/mummergpu/src/suffix-tree.cpp
