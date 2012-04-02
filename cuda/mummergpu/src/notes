@@ -1,0 +1,5 @@
+-profile single-thread run on CPU
+-profile run on GPU
+-find key kernels
+-decide what to include in timing info
+-look at Parboil for list of things to time separately
