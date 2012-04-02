@@ -13,7 +13,7 @@
 // plus a distance up the node's parent link for partial
 // matches on the patch from the root to the node
 
-#define OMP
+//#define OMP
 #define N_THREADS 4
 
 

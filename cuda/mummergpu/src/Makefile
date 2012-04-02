@@ -5,6 +5,12 @@ all: mummergpu
 
 include ../experiments/test_rule.mk
 
+ifeq ($(serial),1)
+	CXX_FLAGS += -UOMP
+else
+	CXX_FLAGS += -DOMP
+endif
+
 # Warning flags
 CXXWARN_FLAGS := \
 	-W -Wall \
@@ -58,10 +64,10 @@ LIB       := -L$(LIBDIR) -lGL -lGLU -lcuda -L$(CUDA_DIR)/lib64 -lcudart
 OBJDIR := $(ROOTOBJDIR)
 
 $(OBJDIR)/%.o : $(SRCDIR)%.c
-	$(NVCC_OBJ) $(CFLAGS) -o $@ -c $<
+	$(CC_OMP) $(CFLAGS) -o $@ -c $<
 
 $(OBJDIR)/%.o : $(SRCDIR)%.cpp
-	$(NVCC_OBJ) -o $@ -c $<
+	$(CXX_OMP) -o $@ -c $<
 
 $(OBJDIR)/%.o : $(SRCDIR)%.cu
 	$(NVCC_OBJ) -o $@ -c $<
