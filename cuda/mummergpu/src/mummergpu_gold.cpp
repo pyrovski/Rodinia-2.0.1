@@ -264,6 +264,7 @@ inline T max(T x, T y) {
   return x < y ? y : x;
 }
 
+//! @todo OpenACC
 int kernel_gold(int qryid,
                 MatchResults* results,
                 char* queries,
@@ -596,7 +597,7 @@ inline char rc(char c) {
 //// Compute reverse substring matches
 ///////////////////////////////////////
 
-
+//! @todo OpenACC
 void
 rc_kernel_gold(int qryid,
                MatchResults* results,
