@@ -23,6 +23,7 @@ bool OPT_showQueryLength = false;
 bool OPT_maxmatch = false;
 bool OPT_on_cpu = false;
 bool OPT_stream_queries = false;
+bool OPT_OpenACC = false;
 
 void printHelp() {
   fprintf(stderr,
@@ -59,7 +60,7 @@ void ParseCommandLine(int argc, char ** argv) {
   int ch;
   optarg = NULL;
 
-  while(!errflg && ((ch = getopt (argc, argv, "aCchql:d:t:s:brcLM")) != EOF)) {
+  while(!errflg && ((ch = getopt (argc, argv, "aCchl:d:t:s:brLM")) != EOF)) {
     switch  (ch) {
     case 'h':
       printHelp();
@@ -76,6 +77,9 @@ void ParseCommandLine(int argc, char ** argv) {
       break;
     case 'C':
       OPT_on_cpu = true;
+      break;
+    case 'a':
+      OPT_OpenACC = true;
       break;
     case 'l':
       OPT_match_length = atoi(optarg);
@@ -124,7 +128,7 @@ void ParseCommandLine(int argc, char ** argv) {
 
 int main(int argc, char* argv[]) {
   ParseCommandLine(argc, argv);
-
+  
   fprintf(stderr, "TWO_LEVEL_NODE_TREE is %d\n", TWO_LEVEL_NODE_TREE);
   fprintf(stderr, "TWO_LEVEL_CHILD_TREE is %d\n", TWO_LEVEL_CHILD_TREE);
   fprintf(stderr, "QRYTEX is %d\n", QRYTEX);
