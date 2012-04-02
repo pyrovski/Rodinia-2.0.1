@@ -1954,9 +1954,7 @@ int matchSubset(MatchContext* ctx,
 
   if (USE_PRINT_KERNEL && !ctx->on_cpu) {
     getExactAlignments(ctx, page, false);
-  }
-
-  else {
+  } else {
     getExactAlignments(ctx, page, true);
   }
 

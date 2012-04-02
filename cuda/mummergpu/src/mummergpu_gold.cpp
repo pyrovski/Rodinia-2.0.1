@@ -774,7 +774,7 @@ NEXT_SUBSTRING:
   return;
 }
 
-
+//! @todo this is the target function for OpenACC
 extern "C"
 void computeGold(MatchResults* results,
                  char* refstr,
