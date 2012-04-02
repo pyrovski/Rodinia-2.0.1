@@ -1,40 +1,9 @@
 include ../../../common/make.config
 targets=$(BINDIR)/mummergpu
-
-all: $(targets)
+all: mummergpu
 .SUFFIXES : .cu .cu_dbg_o .c_dbg_o .cpp_dbg_o .cu_rel_o .c_rel_o .cpp_rel_o .cubin
 
 include ../experiments/test_rule.mk
-
-CXX        := g++ -fopenmp $(PROFILE)
-LINK       := g++ -fopenmp -m64 -fPIC $(PROFILE)
-
-# Add source files here
-STATIC_LIB := libmummergpu.a
-# Cuda source files (compiled with cudacc)
-CUFILES		:= mummergpu.cu
-# C/C++ source files (compiled with gcc / c++)
-CCFILES		:= \
-	 mummergpu_gold.cpp suffix-tree.cpp PoolMalloc.cpp
-
-################################################################################
-# Rules and targets
-
-
-# Basic directory setup for SDK
-# (override directories only if they are not already defined)
-SRCDIR     ?= 
-ROOTDIR    ?= ..
-ROOTBINDIR ?= $(ROOTDIR)/bin
-BINDIR     ?= $(ROOTBINDIR)
-ROOTOBJDIR ?= obj
-LIBDIR     := $(ROOTDIR)/lib
-BINNAME    ?= mummergpu
-# Includes
-INCLUDES  += -I. -I$(CUDA_INSTALL_PATH)/include 
-
-# Libs
-LIB       := -L$(CUDA_LIB_DIR) -L$(LIBDIR) -lcuda -lcudart -lGL -lGLU ${LIB}
 
 # Warning flags
 CXXWARN_FLAGS := \
@@ -49,54 +18,59 @@ CXXWARN_FLAGS := \
 	-Wpointer-arith \
 	-Wcast-align \
 	-Wreturn-type \
-	-Wno-unused-function \
-	$(SPACE)
+	-Wno-unused-function
 
 CWARN_FLAGS := $(CXXWARN_FLAGS) \
 	-Wstrict-prototypes \
 	-Wmissing-prototypes \
 	-Wmissing-declarations \
 	-Wnested-externs \
-	-Wmain \
+	-Wmain 
 
-# Compiler-specific flags
-NVCCFLAGS := -Xcompiler "-m64"
-CXXFLAGS  := -m64 $(CXXWARN_FLAGS)
-CFLAGS    := -m64 $(CWARN_FLAGS)
+NVCC_FLAGS += -use_fast_math
+NVCC_FLAGS += -Xcompiler "-m64"
+CXX_FLAGS  += -m64 $(CXXWARN_FLAGS)
+CC_FLAGS   += -m64 $(CWARN_FLAGS)
 
-# Common flags
-COMMONFLAGS ?= 
-COMMONFLAGS += $(INCLUDES) -DUNIX
+# Compilers
+# Add source files here
+STATIC_LIB := libmummergpu.a
+# Cuda source files (compiled with cudacc)
+CUFILES := mummergpu.cu
+# C/C++ source files (compiled with gcc / c++)
+CXXFILES := mummergpu_gold.cpp suffix-tree.cpp PoolMalloc.cpp
 
-# Add cudacc flags
-NVCCFLAGS += -Xcompiler "$(CUDACCFLAGS)"
+################################################################################
+# Rules and targets
 
-# Add common flags
-NVCCFLAGS += $(COMMONFLAGS)
-CXXFLAGS  += $(COMMONFLAGS)
-CFLAGS    += $(COMMONFLAGS)
+# Basic directory setup for SDK
+# (override directories only if they are not already defined)
+ROOTDIR    ?= ..
+ROOTBINDIR ?= $(ROOTDIR)/bin
+BINDIR     ?= $(ROOTBINDIR)
+ROOTOBJDIR ?= obj
+LIBDIR     := $(ROOTDIR)/lib
+BINNAME    ?= mummergpu
 
-OBJDIR := $(ROOTOBJDIR)/$(BINSUBDIR)
+# Libs
+LIB       := -L$(LIBDIR) -lGL -lGLU -lcuda -L$(CUDA_DIR)/lib64 -lcudart
 
-#.c.c_$(APPEND)_o:
-$(OBJDIR)/%.c_o : $(SRCDIR)%.c
-	$(CC) $(CFLAGS) -o $@ -c $<
+OBJDIR := $(ROOTOBJDIR)
 
-#.cpp.cpp_$(APPEND)_o:
-$(OBJDIR)/%.cpp_o : $(SRCDIR)%.cpp
-	$(CXX) $(CXXFLAGS) -o $@ -c $<
+$(OBJDIR)/%.o : $(SRCDIR)%.c
+	$(NVCC_OBJ) $(CFLAGS) -o $@ -c $<
 
-#.cu.cu_$(APPEND)_o:
-$(OBJDIR)/%.cu_o : $(SRCDIR)%.cu
-	$(NVCC) -o $@ -c $< $(NVCCFLAGS)
+$(OBJDIR)/%.o : $(SRCDIR)%.cpp
+	$(NVCC_OBJ) -o $@ -c $<
 
-#.cu.cubin
+$(OBJDIR)/%.o : $(SRCDIR)%.cu
+	$(NVCC_OBJ) -o $@ -c $<
+
 %.cubin : $(SRCDIR)mummergpu.cu mummergpu_kernel.cu
-	$(NVCC) -o $(BINNAME).cubin -cubin $< $(NVCCFLAGS)
+	$(NVCC_OBJ) -o $(BINNAME).cubin -cubin $<
 
-#.cu.ptx
 %.ptx : $(SRCDIR)%.cu mummergpu_kernel.cu
-	$(NVCC) -o $@ -ptx -Xopencc -LIST:source=on $< $(NVCCFLAGS)
+	$(NVCC_OBJ) -o $@ -ptx -Xopencc -LIST:source=on $<
 
 makedirectories:
 	@mkdir -p $(LIBDIR)
@@ -104,30 +78,19 @@ makedirectories:
 	@mkdir -p $(BINDIR)
 
 LIBOBJS= \
-    $(OBJDIR)/mummergpu_gold.cpp_o \
-    $(OBJDIR)/suffix-tree.cpp_o \
-    $(OBJDIR)/PoolMalloc.cpp_o \
-    $(OBJDIR)/mummergpu.cu_o \
+    $(OBJDIR)/mummergpu_gold.o \
+    $(OBJDIR)/suffix-tree.o \
+    $(OBJDIR)/PoolMalloc.o \
+    $(OBJDIR)/mummergpu.o \
 
 $(LIBDIR)/libmummergpu$(LIBSUFFIX).a: $(LIBOBJS)
 	ar qv $@ $(LIBOBJS)
 
 BINOBJS= \
-    $(OBJDIR)/mummergpu_main.cpp_o
+    $(OBJDIR)/mummergpu_main.o
 
 $(BINDIR)/mummergpu: makedirectories $(LIBDIR)/libmummergpu$(LIBSUFFIX).a $(BINOBJS)
-	$(LINK) -o $(BINDIR)/$(BINNAME)  $(BINOBJS) -lmummergpu$(LIBSUFFIX) $(LIB) 
-
-##############################################################################
-#                               Auto Generated rules go here                 #
-##############################################################################
-
-include ../experiments/rules.mk
-
-##############################################################################
-#                              End auto generated rules                      #
-##############################################################################
-
+	$(CXX_OMP_LINK) -o $(BINDIR)/$(BINNAME)  $(BINOBJS) -lmummergpu$(LIBSUFFIX) $(LIB) 
 
 clean: 
 	rm -f $(LIBOBJS)
