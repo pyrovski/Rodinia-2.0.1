@@ -2176,6 +2176,7 @@ int addMatchToBuffer(int left_in_ref, int qrypos, int matchlen)
 	*p_buf = '\n';
 	++p_buf;
 	bytes_written +=  p_buf - (output_buf + bytes_written);
+	return 0;
 }
 
 #define NODE_LENGTH(x)      (page->ref.aux_data[x].length)
@@ -2487,7 +2488,7 @@ void printAlignments(ReferencePage* page,
     
     
   // If the printparent is the matchnode, then we are already off the golden path
-  if (printParentId == matchNodeId)
+  if (printParentId == (int)matchNodeId)
   {
     if (edge_match > 0)
     {
@@ -2627,7 +2628,7 @@ void printAlignments(ReferencePage* page,
             int cid = addr2id(cur);
             matchlen = MK3(SDEPTH(cur))-1;
                         
-            if (cid == matchNodeId)
+            if (cid == (int)matchNodeId)
             {
               // we overextended the golden path
               depthToGoldenPath = 1;

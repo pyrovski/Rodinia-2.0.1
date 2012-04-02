@@ -15,10 +15,10 @@
 #include <vector_types.h>
 
 // includes, kernels
-#include <common.cu>
+#include "common.cu"
 
-#include <mummergpu.h>
-#include <mummergpu_kernel.cu>
+#include "mummergpu.h"
+#include "mummergpu_kernel.cu"
 
 int USE_PRINT_KERNEL = 1;
 
@@ -387,7 +387,7 @@ void buildReferenceTexture(Reference* ref,
 	
  	ref->bytes_on_board = (width * node_height * sizeof(PixelOfNode)) + 
                           (width * children_height * sizeof(PixelOfChildren));
-	fprintf(stderr, "This tree will need %d bytes on the board\n", ref->bytes_on_board);
+	fprintf(stderr, "This tree will need %ld bytes on the board\n", ref->bytes_on_board);
 
 #if REORDER_REF
     char * reordertimer = createTimer();
@@ -450,7 +450,7 @@ void buildReferenceTexture(Reference* ref,
     	statistics->t_reorder_ref_str += getTimerValue(reordertimer);
     deleteTimer(reordertimer);
 #else
-    fprintf(stderr, "The refstr requires %d bytes\n", ref->len);
+    fprintf(stderr, "The refstr requires %ld bytes\n", ref->len);
 	ref->bytes_on_board += ref->len;
 #endif
 
@@ -1067,7 +1067,7 @@ void loadResultBuffer(MatchContext* ctx)
     deleteTimer(offsettimer);
 
 	unsigned int numCoords = ctx->results.numCoords;
-	fprintf(stderr, "Allocating result array for %d queries (%d bytes) ...", 
+	fprintf(stderr, "Allocating result array for %d queries (%ld bytes) ...", 
 			numQueries, numCoords*sizeof(MatchCoord) );
 	
     size_t boardFreeMemory = 0;
@@ -1075,7 +1075,7 @@ void loadResultBuffer(MatchContext* ctx)
 
 	boardMemory(&boardFreeMemory, &total_mem);
 
-   fprintf(stderr,"board free memory: %u total memory: %u\n", 
+   fprintf(stderr,"board free memory: %ld total memory: %ld\n", 
           boardFreeMemory, total_mem);
 	
     ctx->results.h_match_coords = (MatchCoord*) calloc( numCoords, sizeof(MatchCoord));
@@ -1332,7 +1332,8 @@ void coordsToPrintBuffers(MatchContext* ctx,
     *matches = M;
 	*nextqry = qry;
 	*nextqrychar = qrychar;
-	fprintf(stderr, "Allocing %d bytes of host memory for %d alignments\n",  alignmentOffset * sizeof(Alignment), numAlignments);
+	fprintf(stderr, "Allocing %ld bytes of host memory for %d alignments\n",  
+		alignmentOffset * sizeof(Alignment), numAlignments);
     *alignments = (struct Alignment *) calloc(alignmentOffset, sizeof(Alignment));
 	//cudaMallocHost((void**)alignments, numAlignments * sizeof(Alignment));
 }
@@ -1359,7 +1360,8 @@ void runPrintKernel(MatchContext* ctx,
     startTimer(atimer);
     // Copy matches to card
     fprintf(stderr, "prepared %d matches %d alignments\n", numMatches, numAlignments);
-	fprintf(stderr, "Copying %d bytes to host memory for %d alignments\n",  numAlignments * sizeof(Alignment), numAlignments);
+    fprintf(stderr, "Copying %ld bytes to host memory for %d alignments\n",  
+	    numAlignments * sizeof(Alignment), numAlignments);
 
     int DEBUG = 0;
     if (DEBUG)
@@ -1514,7 +1516,7 @@ void getExactAlignments(MatchContext * ctx, ReferencePage * page, bool on_cpu)
     if (!on_cpu)
 	{
 		boardMemory(&boardFreeMemory, &total_mem);
-		fprintf(stderr, "board free memory: %u total memory: %u\n", 
+		fprintf(stderr, "board free memory: %lu total memory: %lu\n", 
 		boardFreeMemory, total_mem);
 	}
 	else
@@ -1528,7 +1530,7 @@ void getExactAlignments(MatchContext * ctx, ReferencePage * page, bool on_cpu)
 #endif
     
 	boardFreeMemory -= BREATHING_ROOM;
-    fprintf(stderr, "board free memory: %u\n", boardFreeMemory);
+    fprintf(stderr, "board free memory: %lu\n", boardFreeMemory);
     
     int rTotalMatches = 0;
     int rTotalAlignments = 0;
@@ -2007,7 +2009,7 @@ void matchQueryBlockToReferencePage(MatchContext* ctx,
 {
 	char*  ktimer = createTimer();
 	
-    fprintf(stderr, "Memory footprint is:\n\tqueries: %d\n\tref: %d\n\tresults: %d\n",
+    fprintf(stderr, "Memory footprint is:\n\tqueries: %ld\n\tref: %ld\n\tresults: %ld\n",
             ctx->queries->bytes_on_board,
             ctx->ref->bytes_on_board,
             ctx->results.bytes_on_board);
@@ -2083,7 +2085,7 @@ int getFreeDeviceMemory(bool on_cpu)
 	if (!on_cpu) {
 
         boardMemory(&free_mem, &total_mem);
-		fprintf(stderr, "board free memory: %u total memory: %u\n", 
+		fprintf(stderr, "board free memory: %lu total memory: %lu\n", 
 		free_mem, total_mem);
     }
     else {

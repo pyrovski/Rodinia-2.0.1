@@ -826,7 +826,7 @@ void computeGold(MatchResults* results,
     
 #ifdef OMP
 	omp_set_num_threads(N_THREADS);
-	//fprintf(stderr, "num of omp threads: %d\n", omp_get_num_threads());
+	fprintf(stderr, "num of omp threads: %d\n", omp_get_num_threads());
 	#pragma omp parallel for 
 #endif
 	  for (int i = 0; i < numQueries; ++i)
