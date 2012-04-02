@@ -30,13 +30,12 @@ static const size_t POOLBLOCKSIZE = 10*1024*1024;
 
 #include <cstdlib>
 
-struct PoolNode_t
-{
+struct PoolNode_t {
   char *block;
   size_t offset;
   size_t remaining;
   size_t size;
-  
+
   PoolNode_t *next;
 };
 
@@ -44,31 +43,27 @@ struct PoolNode_t
 
 //============================================================ PoolMalloc_t ====
 //------------------------------------------------------------ PoolMalloc_t ----
-PoolMalloc_t::PoolMalloc_t()
-{
+PoolMalloc_t::PoolMalloc_t() {
   head_m = NULL;
 }
 
 
 //----------------------------------------------------------- ~PoolMalloc_t ----
-PoolMalloc_t::~PoolMalloc_t()
-{
+PoolMalloc_t::~PoolMalloc_t() {
   pfree();
 }
 
 
 //-------------------------------------------------------------------- free ----
-void PoolMalloc_t::pfree()
-{
+void PoolMalloc_t::pfree() {
   PoolNode_t * next;
 
-  while ( head_m )
-    {
-      next = head_m->next;
-      free(head_m->block);
-      free(head_m);
-      head_m = next;
-    }
+  while ( head_m ) {
+    next = head_m->next;
+    free(head_m->block);
+    free(head_m);
+    head_m = next;
+  }
 
   head_m = NULL;
 }
@@ -79,27 +74,25 @@ void PoolMalloc_t::pfree()
 /// Parcel memory from big byte buckets. Return all memory with 8 byte
 /// alignment to silence the bus errors on Alpha and Solaris.
 ///
-void * PoolMalloc_t::pmalloc(size_t size)
-{
+void * PoolMalloc_t::pmalloc(size_t size) {
   size_t remainder = size % 8;
 
   //-- Make sure the next block is 8 byte aligned
   if ( remainder ) size += 8 - remainder;
 
-  if ( head_m == NULL || size > head_m->remaining )
-    {
-      size_t blockSize = POOLBLOCKSIZE;
-      if ( size > blockSize ) blockSize = size;
+  if ( head_m == NULL || size > head_m->remaining ) {
+    size_t blockSize = POOLBLOCKSIZE;
+    if ( size > blockSize ) blockSize = size;
 
-      PoolNode_t *newHead;
-      NEW(newHead, PoolNode_t);
-      MALLOC(newHead->block, char*, blockSize);
-      newHead->size = blockSize;
-      newHead->remaining = blockSize;
-      newHead->offset = 0;
-      newHead->next = head_m;
-      head_m = newHead;
-    }
+    PoolNode_t *newHead;
+    NEW(newHead, PoolNode_t);
+    MALLOC(newHead->block, char*, blockSize);
+    newHead->size = blockSize;
+    newHead->remaining = blockSize;
+    newHead->offset = 0;
+    newHead->next = head_m;
+    head_m = newHead;
+  }
 
   void *retval = head_m->block + head_m->offset;
   head_m->offset += size;
@@ -110,8 +103,7 @@ void * PoolMalloc_t::pmalloc(size_t size)
 
 
 //------------------------------------------------------------------ strdup ----
-char * PoolMalloc_t::pstrdup(const char * s)
-{
+char * PoolMalloc_t::pstrdup(const char * s) {
   size_t size = strlen(s) + 1;
   char *retval = (char *) pmalloc(size);
   memcpy(retval, s, size);

@@ -24,8 +24,7 @@ struct PoolNode_t;
  ** object is destroyed.
  **/
 
-class PoolMalloc_t
-{
+class PoolMalloc_t {
 
 public:
   /// Initialize the pool

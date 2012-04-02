@@ -42,7 +42,7 @@ const int basecount = 5;
 // #ifndef NODETEX
 // #define NODETEX 1
 // #endif
-// 
+//
 // #ifndef CHILDTEX
 // #define CHILDTEX 1
 // #endif
@@ -68,7 +68,7 @@ const int basecount = 5;
 #error QRYTEX and COALESCED_QUERIES are mutually exclusive
 #endif
 
-// Two level tree means that nodes with nodeid < threshhold (define in the 
+// Two level tree means that nodes with nodeid < threshhold (define in the
 // kernel), are accessed through the constant memory, instead of global/tex
 // Since the access patterns for PixelOfNode and PixelOfChildren are different
 // we provide the option to store one side in a single-level memory hierarchy,
@@ -85,18 +85,18 @@ const int basecount = 5;
 //PARMETERS FROM PAPER:
 // #define QRYTEX 0
 // #define COALESCED_QUERIES 0
-// 
+//
 // // Reference parameters
 // #define REFTEX 1
 // #define REORDER_REF 1
-// 
+//
 // // Tree parameters
 // #define NODETEX 1
 // #define CHILDTEX 1
 // #define REORDER_TREE 1
 // #define MERGETEX 0
-// 
-// // Two level tree means that nodes with nodeid < threshhold (define in the 
+//
+// // Two level tree means that nodes with nodeid < threshhold (define in the
 // // kernel), are accessed through the constant memory, instead of global/tex
 // // Since the access patterns for PixelOfNode and PixelOfChildren are different
 // // we provide the option to store one side in a single-level memory hierarchy,
@@ -110,28 +110,25 @@ const int basecount = 5;
 
 // 4 bytes
 struct TextureAddress {
-    union {
-        unsigned int data;
-        
-        struct {
+  union {
+    unsigned int data;
+
+    struct {
 #if REORDER_TREE
-            unsigned short x;  // really just 12 bits
-            unsigned short y;  // really just 12 bits
+      unsigned short x;  // really just 12 bits
+      unsigned short y;  // really just 12 bits
 #else
-            unsigned int x;
+      unsigned int x;
 #endif
-        };
     };
+  };
 };
 
 // Store the start, end coordinate of node, and the parent, suffix links
-struct PixelOfNode
-{
-  union
-  {
+struct PixelOfNode {
+  union {
     uint4 data;
-    struct
-    {
+    struct {
       unsigned char parent[3];
       unsigned char suffix[3];
 
@@ -145,16 +142,12 @@ struct PixelOfNode
 };
 
 // If leafchar is 0, store the ACGT$ links, else store the leafid
-struct PixelOfChildren
-{
-  union
-  {
+struct PixelOfChildren {
+  union {
     uint4 data;
 
-    union
-    {
-      struct
-      {
+    union {
+      struct {
         unsigned char a[3];
         unsigned char c[3];
         unsigned char g[3];
@@ -163,9 +156,8 @@ struct PixelOfChildren
 
         char leafchar;
       };
-      
-      struct
-      {
+
+      struct {
         unsigned char leafid [3];
         unsigned char pad [12];
         char leafchar0;
@@ -174,8 +166,7 @@ struct PixelOfChildren
   };
 };
 
-typedef struct MatchInfo
-{
+typedef struct MatchInfo {
   unsigned int resultsoffset;
   unsigned int queryid;
   TextureAddress matchnode;
@@ -184,8 +175,7 @@ typedef struct MatchInfo
   unsigned short qrystartpos;
 } MatchInfo;
 
-typedef struct Alignment
-{
+typedef struct Alignment {
   int left_in_ref;
   unsigned short matchlen;
 } Alignment;
