@@ -1,4 +1,19 @@
 -profile single-thread run on CPU
+ - 92.5% of time is spent in three functions:
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls   s/call   s/call  name    
+ 46.05    102.29   102.29  2500000     0.00     0.00  kernel_gold(int, MatchResults*, char*, PixelOfNode*, PixelOfChildren*, char*, int const*, int const*, int, int)
+ 31.19    171.57    69.28 202500000     0.00     0.00  printAlignments(ReferencePage*, Alignment*, char*, int, TextureAddress, int, int, int, bool, bool)
+ 15.47    205.94    34.36 405000022     0.00     0.00  lookupNumLeaves
+
+kernel_gold: sequence alignment
+printAlignments: some sort of tree traversal
+lookupNumLeaves:
+
+
+-profile OMP run on CPU
+
 -profile run on GPU
 -find key kernels
 -decide what to include in timing info
