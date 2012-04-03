@@ -485,7 +485,7 @@ void computeGold(MatchResults* results,
 #ifdef OMP
     omp_set_num_threads(N_THREADS);
     //fprintf(stderr, "num of omp threads: %d\n", omp_get_num_threads());
-#pragma omp parallel for
+#pragma omp parallel for schedule(guided)
 #endif
     for (int i = 0; i < numQueries; ++i) {
       rc_kernel_gold(i,
@@ -506,7 +506,7 @@ void computeGold(MatchResults* results,
 #ifdef OMP
     omp_set_num_threads(N_THREADS);
     fprintf(stderr, "num of omp threads: %d\n", omp_get_num_threads());
-#pragma omp parallel for
+#pragma omp parallel for schedule(guided)
 #endif
     for (int i = 0; i < numQueries; ++i) {
 
