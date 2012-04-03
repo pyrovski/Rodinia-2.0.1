@@ -1005,7 +1005,7 @@ void writeAddress(unsigned char arr[3], TextureAddress addr) {
 #endif
 }
 
-TextureAddress arrayToAddress(unsigned char arr[3]) {
+inline TextureAddress arrayToAddress(unsigned char arr[3]) {
   TextureAddress retval;
 
 #if REORDER_TREE

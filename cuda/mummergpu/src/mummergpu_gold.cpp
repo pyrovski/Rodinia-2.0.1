@@ -246,7 +246,7 @@ void set_result(unsigned int cur,
   }
 }
 
-void arrayToAddress(unsigned char arr[3], unsigned int& addr) {
+inline void arrayToAddress(unsigned char arr[3], unsigned int& addr) {
 #if REORDER_TREE
   addr = (arr[0] | ((arr[2] & 0xF) << 8)) | ((arr[1] | ((arr[2] & 0xF0) << 4)) << 16);
 #else
