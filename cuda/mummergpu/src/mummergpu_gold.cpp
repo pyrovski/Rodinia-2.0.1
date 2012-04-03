@@ -90,7 +90,7 @@ static const int maxdim = 4096;
 /// getRef
 //////////////////////////////////
 
-static char getRef(int refpos, char* ref) {
+static inline char getRef(int refpos, const char* ref) {
   return ref[refpos];
 }
 
@@ -105,7 +105,7 @@ union SingleNode {
 /// getNode
 //////////////////////////////////
 
-PixelOfNode getNode(unsigned int cur,  PixelOfNode* nodes
+inline PixelOfNode getNode(unsigned int cur,  PixelOfNode* nodes
 #if TREE_ACCESS_HISTOGRAM
                     , int* node_hist
 #endif
@@ -128,7 +128,7 @@ PixelOfNode getNode(unsigned int cur,  PixelOfNode* nodes
 /// getChildren
 //////////////////////////////////
 
-PixelOfChildren getChildren(unsigned int cur, PixelOfChildren* childrenarr
+inline const PixelOfChildren getChildren(unsigned int cur, const PixelOfChildren* childrenarr
 #if TREE_ACCESS_HISTOGRAM
                             , int* child_hist
 #endif
@@ -246,7 +246,7 @@ void set_result(unsigned int cur,
   }
 }
 
-inline void arrayToAddress(unsigned char arr[3], unsigned int& addr) {
+inline void arrayToAddress(const unsigned char arr[3], unsigned int& addr) {
 #if REORDER_TREE
   addr = (arr[0] | ((arr[2] & 0xF) << 8)) | ((arr[1] | ((arr[2] & 0xF0) << 4)) << 16);
 #else
@@ -265,12 +265,12 @@ inline T max(T x, T y) {
 }
 
 //! @todo OpenACC
-int kernel_gold(int qryid,
+int kernel_gold(const int qryid,
                 MatchResults* results,
-                char* queries,
-                PixelOfNode* nodes,
-                PixelOfChildren* childrenarr,
-                char* ref,
+		const char* queries,
+		PixelOfNode* nodes,
+		const PixelOfChildren* childrenarr,
+		const char* ref,
                 const int* queryAddrs,
                 const int* queryLengths,
                 const int numQueries,
@@ -298,10 +298,7 @@ int kernel_gold(int qryid,
   SHIFT_QUERIES(queries, qryAddr);
 
   int last = qlen - min_match_len;
-  for (int qrystart = 0;
-       qrystart <= last;
-       qrystart++,
-       result += RESULT_SPAN) {
+  for (int qrystart = 0; qrystart <= last; qrystart++, result += RESULT_SPAN){
     //PixelOfNode node;
     unsigned int node_start;
     unsigned int prev;
@@ -322,8 +319,7 @@ int kernel_gold(int qryid,
     while ((c != '\0')) {
       XPRINTF("Next edge to follow: %c (%d)\n", c, qry_match_len);
 
-      PixelOfChildren children;
-      children = GETCHILDRENHIST(cur, false);
+      const PixelOfChildren children = GETCHILDRENHIST(cur, false);
       prev = cur;
 
       switch (c) {
@@ -419,7 +415,8 @@ NEXT_SUBSTRING: {
     }
     //XPRINTF(" following suffix link. mustmatch:%d qry_match_len:%d sl:("fNID")\n",
     //       mustmatch, qry_match_len, NID(cur));
-  }
+  } //for(int qrystart = 0; qrystart <= last; qrystart++, result += RESULT_SPAN)
+
 
   return 0;
 }
