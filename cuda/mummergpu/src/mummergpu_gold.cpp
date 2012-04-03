@@ -105,7 +105,7 @@ union SingleNode {
 /// getNode
 //////////////////////////////////
 
-inline PixelOfNode getNode(unsigned int cur,  PixelOfNode* nodes
+inline const PixelOfNode getNode(unsigned int cur,  const PixelOfNode* nodes
 #if TREE_ACCESS_HISTOGRAM
                     , int* node_hist
 #endif
@@ -230,7 +230,7 @@ INC:
 /// set_result
 //////////////////////////////////
 
-void set_result(unsigned int cur,
+inline void set_result(unsigned int cur,
                 MatchCoord* result,
                 int edge_match_length,
                 int qry_match_len,
@@ -268,7 +268,7 @@ inline T max(T x, T y) {
 int kernel_gold(const int qryid,
                 MatchResults* results,
 		const char* queries,
-		PixelOfNode* nodes,
+		const PixelOfNode* nodes,
 		const PixelOfChildren* childrenarr,
 		const char* ref,
                 const int* queryAddrs,
@@ -395,7 +395,7 @@ int kernel_gold(const int qryid,
 
         c = GETQCHAR(qrystart + qry_match_len);
       }
-    }
+    } // while(c)
 
     XPRINTF("end of string\n");
 
