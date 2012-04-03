@@ -5,6 +5,12 @@ all: mummergpu
 
 include ../experiments/test_rule.mk
 
+ifeq ($(serial),1)
+	CXX_FLAGS += -UOMP
+else
+	CXX_FLAGS += -DOMP
+endif
+
 # Warning flags
 CXXWARN_FLAGS := \
 		-W -Wall \
