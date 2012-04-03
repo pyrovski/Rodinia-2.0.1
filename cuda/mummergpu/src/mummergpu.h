@@ -1,3 +1,6 @@
+#ifndef MUMMER_GPU_H
+#define MUMMER_GPU_H
+
 #include <stdint.h>
 #include <stdlib.h>
 #include "common.cu"
@@ -213,3 +216,4 @@ extern "C" {
   void deleteTimer(char* ptr);
 
 }
+#endif

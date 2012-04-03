@@ -19,6 +19,9 @@
 #define uint4 uint32_t
 #define int2 int32_t
 #include "mummergpu.h"
+#include "cpucommon.h"
+
+#include "suffix-tree.hh"
 
 #define MPOOL 0
 
@@ -989,31 +992,6 @@ inline TextureAddress id2addr(int id) {
   return retval;
 }
 
-inline int addr2id(TextureAddress addr) {
-#if MERGETEX && REORDER_TREE
-  // shift x'a 12th bit as y's 13th
-  addr.y |= (addr.x & 0x800) << 1;
-  addr.x &= 0x7FF;
-
-  int blocky = addr.y & 0x1F;
-  int bigy = addr.y >> 5;
-  int bigx = (addr.x << 5) + blocky;
-  return bigx + (bigy << 16);
-
-#elif REORDER_TREE
-  int blocky = addr.y & 0x1F;
-  int bigy = addr.y >> 5;
-  int bigx = (addr.x << 5) + blocky;
-  return bigx + (bigy << 17);
-
-#elif MERGETEX
-  return addr.x;
-
-#else
-  return addr.x;
-
-#endif
-}
 
 void writeAddress(unsigned char arr[3], TextureAddress addr) {
 #if REORDER_TREE
@@ -1970,20 +1948,6 @@ int addMatchToBuffer(int left_in_ref, int qrypos, int matchlen) {
   return 0;
 }
 
-#define NODE_LENGTH(x)      (page->ref.aux_data[x].length)
-#define NODE_PRINTPARENT(x) (page->ref.aux_data[x].printParent)
-#define NODE_NUMLEAVES(x)   (page->ref.aux_data[x].numleaves)
-
-#if REORDER_TREE
-#define GETNODE(node_addr)     (((PixelOfNode*)    (page->ref.h_node_tex_array))     + (node_addr.x) + (node_addr.y * MAX_TEXTURE_DIMENSION))
-#define GETCHILDREN(node_addr) (((PixelOfChildren*)(page->ref.h_children_tex_array)) + (node_addr.x) + (node_addr.y * MAX_TEXTURE_DIMENSION))
-#define PADDR(node_addr)        node_addr.x << "," << node_addr.y
-#else
-#define GETCHILDREN(node_addr) (((PixelOfChildren*)(page->ref.h_children_tex_array)) + (node_addr.x))
-#define GETNODE(node_addr)     (((PixelOfNode*)    (page->ref.h_node_tex_array))     + (node_addr.x))
-#define PADDR(node_addr)       node_addr.x
-#endif
-
 #if MERGETEX
 
 char * getMerged(const ReferencePage * page, TextureAddress cur, int getChildrenData) {
@@ -2425,14 +2389,6 @@ void printAlignments(ReferencePage* page,
       }
     }
   }
-}
-
-extern "C"
-int lookupNumLeaves(ReferencePage * page, TextureAddress addr) {
-  unsigned int nodeid = addr2id(addr);
-  TextureAddress printParent = NODE_PRINTPARENT(nodeid);
-  nodeid = addr2id(printParent);
-  return NODE_NUMLEAVES(nodeid);
 }
 
 #if 0

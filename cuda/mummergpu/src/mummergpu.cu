@@ -16,6 +16,7 @@
 
 // includes, kernels
 #include "common.cu"
+#include "suffix-tree.h"
 
 #include "mummergpu.h"
 #include "mummergpu_kernel.cu"
@@ -146,8 +147,10 @@ void getQueriesTexture(int qfile,
                        int min_match_length,
                        bool rc);
 
+/*
 extern "C"
 int lookupNumLeaves(ReferencePage * page, TextureAddress addr);
+*/
 
 void printAlignments(ReferencePage* page,
                      Alignment* alignments,
