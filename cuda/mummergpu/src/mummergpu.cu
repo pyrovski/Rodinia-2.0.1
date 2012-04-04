@@ -1043,7 +1043,11 @@ void loadResultBuffer(MatchContext* ctx) {
   fprintf(stderr,"board free memory: %ld total memory: %ld\n",
           boardFreeMemory, total_mem);
 
-  ctx->results.h_match_coords = (MatchCoord*) calloc( numCoords, sizeof(MatchCoord));
+  ctx->results.h_match_coords = (MatchCoord*)calloc( numCoords, sizeof(MatchCoord));
+  /* pinned memory did not improve runtime
+  cudaMallocHost(&ctx->results.h_match_coords, numCoords * sizeof(MatchCoord));
+  memset(ctx->results.h_match_coords, 0, numCoords * sizeof(MatchCoord));
+  */
   if (ctx->results.h_match_coords == NULL) {
     trap_dbg();
     exit(EXIT_FAILURE);
@@ -1590,6 +1594,7 @@ void getExactAlignments(MatchContext * ctx, ReferencePage * page, bool on_cpu) {
 
   }
   free(ctx->results.h_coord_tex_array);
+  //cudaFreeHost(ctx->results.h_match_coords);
   free(ctx->results.h_match_coords);
   ctx->results.h_coord_tex_array = NULL;
   ctx->results.h_match_coords = NULL;
