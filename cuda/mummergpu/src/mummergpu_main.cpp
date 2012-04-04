@@ -13,6 +13,7 @@ char * OPT_dotfilename = NULL;
 char * OPT_texfilename = NULL;
 int    OPT_num_reference_pages = 1;
 char * OPT_stats_file = NULL;
+char * OPT_outputfilename = 0;
 
 // MUMmer options
 int  OPT_match_length = 20;
@@ -60,8 +61,13 @@ void ParseCommandLine(int argc, char ** argv) {
   int ch;
   optarg = NULL;
 
-  while(!errflg && ((ch = getopt (argc, argv, "aCchl:d:t:s:brLM")) != EOF)) {
+  while(!errflg && ((ch = getopt (argc, argv, "o:aCchl:d:t:s:brLM")) != EOF)) {
     switch  (ch) {
+    case 'o':
+      //strncpy(OPT_outputfilename, optarg, sizeof(OPT_outputfilename));
+      //OPT_outputfilename[sizeof(OPT_outputfilename)-1] = 0;
+      OPT_outputfilename = optarg;
+      break;
     case 'h':
       printHelp();
       break;
@@ -129,6 +135,14 @@ void ParseCommandLine(int argc, char ** argv) {
 int main(int argc, char* argv[]) {
   ParseCommandLine(argc, argv);
   
+  if(OPT_outputfilename){
+    FILE *outfile = freopen(OPT_outputfilename, "w", stdout);
+    if(outfile)
+      fprintf(stderr, "redirecting output to %s\n", OPT_outputfilename);
+    else
+      fprintf(stderr, "failed to redirect output to %s\n", OPT_outputfilename);
+  }
+
   fprintf(stderr, "TWO_LEVEL_NODE_TREE is %d\n", TWO_LEVEL_NODE_TREE);
   fprintf(stderr, "TWO_LEVEL_CHILD_TREE is %d\n", TWO_LEVEL_CHILD_TREE);
   fprintf(stderr, "QRYTEX is %d\n", QRYTEX);
