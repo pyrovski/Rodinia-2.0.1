@@ -9,12 +9,14 @@ Each sample counts as 0.01 seconds.
 
 kernel_gold: sequence alignment
 printAlignments: some sort of tree traversal
-lookupNumLeaves:
+lookupNumLeaves: now inlined
 
-
--profile OMP run on CPU
+- OMP run on CPU:
+ -maybe 30% speedup on four cores vs one core
 
 -profile run on GPU
 -find key kernels
+-what is the GPU parallelization strategy?
+ -
 -decide what to include in timing info
 -look at Parboil for list of things to time separately
