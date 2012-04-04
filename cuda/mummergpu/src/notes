@@ -15,7 +15,10 @@ lookupNumLeaves: now inlined
  -maybe 30% speedup on four cores vs one core
 
 -profile run on GPU
+ -only ~15% of total time is on the gpu
 -find key kernels
+ -mummergpuKernel
+ -printKernel
 -what is the GPU parallelization strategy?
  -
 -decide what to include in timing info
