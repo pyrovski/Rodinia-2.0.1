@@ -1,6 +1,14 @@
 include ../../../common/make.config
+# Basic directory setup for SDK
+# (override directories only if they are not already defined)
+ROOTDIR    ?= ..
+ROOTBINDIR ?= $(ROOTDIR)/bin
+BINDIR     ?= $(ROOTBINDIR)
+ROOTOBJDIR ?= obj
+LIBDIR     := $(ROOTDIR)/lib
+BINNAME    ?= mummergpu
 targets=$(BINDIR)/mummergpu
-all: mummergpu
+all: $(targets)
 .SUFFIXES : .cu .cu_dbg_o .c_dbg_o .cpp_dbg_o .cu_rel_o .c_rel_o .cpp_rel_o .cubin
 
 include ../experiments/test_rule.mk
@@ -34,22 +42,11 @@ OPENACC_FLAGS += -I$(CUDA_DIR)/include
 # Compilers
 # Add source files here
 STATIC_LIB := libmummergpu.a
-# Cuda source files (compiled with cudacc)
-CUFILES := mummergpu.cu
 # C/C++ source files (compiled with gcc / c++)
-CXXFILES := mummergpu_gold.cpp suffix-tree.cpp PoolMalloc.cpp
+CXXFILES := mummergpu.cpp mummergpu_gold.c suffix-tree.cpp PoolMalloc.cpp
 
 ################################################################################
 # Rules and targets
-
-# Basic directory setup for SDK
-# (override directories only if they are not already defined)
-ROOTDIR    ?= ..
-ROOTBINDIR ?= $(ROOTDIR)/bin
-BINDIR     ?= $(ROOTBINDIR)
-ROOTOBJDIR ?= obj
-LIBDIR     := $(ROOTDIR)/lib
-BINNAME    ?= mummergpu
 
 # Libs
 LIB       := -L$(LIBDIR) -lGL -lGLU -lcuda -L$(CUDA_DIR)/lib64 -lcudart
@@ -57,19 +54,10 @@ LIB       := -L$(LIBDIR) -lGL -lGLU -lcuda -L$(CUDA_DIR)/lib64 -lcudart
 OBJDIR := $(ROOTOBJDIR)
 
 $(OBJDIR)/%.o : %.c
-	$(OPENACC_CXX) -o $@ -c $<
+	$(OPENACC_CC) -o $@ -c $<
 
 $(OBJDIR)/%.o : %.cpp
 	$(OPENACC_CXX) -o $@ -c $<
-
-$(OBJDIR)/%.o : %.cu
-	$(OPENACC_CXX) -o $@ -c $<
-
-%.cubin : mummergpu.cu mummergpu_kernel.cu
-	$(OPENACC_CXX) -o $(BINNAME).cubin -cubin $<
-
-%.ptx : %.cu mummergpu_kernel.cu
-	$(OPENACC_CXX) -o $@ -ptx -Xopencc -LIST:source=on $<
 
 makedirectories:
 	@mkdir -p $(LIBDIR)
@@ -88,8 +76,9 @@ $(LIBDIR)/libmummergpu$(LIBSUFFIX).a: $(LIBOBJS)
 BINOBJS= \
     $(OBJDIR)/mummergpu_main.o
 
+
 $(BINDIR)/mummergpu: makedirectories $(LIBDIR)/libmummergpu$(LIBSUFFIX).a $(BINOBJS)
-	$(OPENACC_LINK) -o $(BINDIR)/$(BINNAME)  $(BINOBJS) -lmummergpu$(LIBSUFFIX) $(LIB) 
+	$(OPENACC_CXX_LINK) -o $(BINDIR)/$(BINNAME)  $(BINOBJS) -lmummergpu$(LIBSUFFIX) $(LIB) 
 
 clean: 
 	rm -f $(LIBOBJS)
@@ -101,7 +90,6 @@ clean:
 	rm -rf $(ROOTOBJDIR)
 	rm -rf $(LIBDIR)
 
-mummergpu: $(BINDIR)/mummergpu
 
 cubin: mummergpu.cubin
 

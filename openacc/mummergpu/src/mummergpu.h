@@ -217,6 +217,6 @@ extern "C" {
   void deleteTimer(char* ptr);
 
 #ifdef __cplusplus
-]
+}
 #endif
 #endif

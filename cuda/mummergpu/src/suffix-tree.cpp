@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <cmath>
 #include <sys/time.h>
+#include <unistd.h>
 #include <list>
 #include <map>
 #include <vector>

@@ -18,6 +18,7 @@
 #include "suffix-tree.h"
 
 #include "mummergpu.h"
+#include "mummergpu_gold.h"
 
 int USE_PRINT_KERNEL = 1;
 
@@ -103,17 +104,17 @@ void mapQueriesEndToEnd(MatchContext* ctx,
                         unsigned int numAligments);
 
 char *  createTimer() {
-  unsigned int * ptr = (unsigned int *) malloc(sizeof(struct Timer_t));
-  memset(ptr, 0, sizeof(struct Timer_t));
+  unsigned int * ptr = (unsigned int *) malloc(sizeof(Timer_t));
+  memset(ptr, 0, sizeof(Timer_t));
   return (char *) ptr;
 }
 
 void startTimer(char * ptr) {
-  gettimeofday(&(((struct Timer_t *)ptr)->start_m), NULL);
+  gettimeofday(&(((Timer_t *)ptr)->start_m), NULL);
 }
 
 void stopTimer(char * ptr) {
-  gettimeofday(&(((struct Timer_t *)ptr)->end_m), NULL);
+  gettimeofday(&(((Timer_t *)ptr)->end_m), NULL);
 }
 
 float getTimerValue(char * ptr) {
@@ -207,13 +208,13 @@ extern "C"
 int createMatchContext(Reference* ref,
                        QuerySet* queries,
                        MatchResults* matches,
-                       bool on_cpu,
+                       int on_cpu,
                        int min_match_length,
                        char* stats_file,
-                       bool reverse,
-                       bool forwardreverse,
-                       bool forwardcoordinates,
-                       bool showQueryLength,
+                       int reverse,
+                       int forwardreverse,
+                       int forwardcoordinates,
+                       int showQueryLength,
                        char* dotfilename,
                        char* texfilename,
                        MatchContext* ctx) {
@@ -381,9 +382,6 @@ void loadReferenceTexture(MatchContext* ctx) {
   int numrows = ceil(ref->len / ((float)ref->pitch));
   int blocksize = 4;
   numrows += blocksize;
-
-  cudaChannelFormatDesc refTextureDesc =
-    cudaCreateChannelDesc(8, 0, 0, 0, cudaChannelFormatKindSigned);
 
   if (!ctx->on_cpu) {
 
@@ -629,7 +627,7 @@ void coordsToPrintBuffers(MatchContext* ctx,
 
   int qry = *nextqry;
   int qrychar = *nextqrychar;
-  bool set_full = false;
+  int set_full = false;
   while (qry < numQueries) {
     // h_lengths_array doesn't count the 'q' at the beginning of each query
     int qlen = ctx->queries->h_lengths_array[qry] + 1 - match_length;
@@ -673,7 +671,7 @@ void coordsToPrintBuffers(MatchContext* ctx,
   *nextqrychar = qrychar;
   fprintf(stderr, "Allocing %ld bytes of host memory for %d alignments\n",
           alignmentOffset * sizeof(Alignment), numAlignments);
-  *alignments = (struct Alignment *) calloc(alignmentOffset, sizeof(Alignment));
+  *alignments = (Alignment *) calloc(alignmentOffset, sizeof(Alignment));
   //cudaMallocHost((void**)alignments, numAlignments * sizeof(Alignment));
 }
 
@@ -1294,8 +1292,8 @@ int streamReferenceAgainstQueries(MatchContext* ctx) {
 
 extern "C"
 int matchQueries(MatchContext* ctx) {
-  assert(sizeof(struct PixelOfNode) == sizeof(uint4));
-  assert(sizeof(struct PixelOfChildren) == sizeof(uint4));
+  assert(sizeof(PixelOfNode) == sizeof(uint4));
+  assert(sizeof(PixelOfChildren) == sizeof(uint4));
 
 #if TREE_ACCESS_HISTOGRAM
   ctx->statistics.node_hist_size = 0;
