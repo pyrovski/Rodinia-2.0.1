@@ -6,9 +6,8 @@
 #include "common.h"
 
 #ifdef __cplusplus
-extern "C" 
+extern "C" {
 #endif
-{
   typedef struct  {
     int qfile;
 
@@ -148,15 +147,15 @@ extern "C"
     QuerySet* queries;
     MatchResults results;
 
-    bool on_cpu;
+    int on_cpu;
 
     int min_match_length;
 
-    bool reverse;
-    bool forwardreverse;
-    bool forwardcoordinates;
-    bool show_query_length;
-    bool maxmatch;
+    int reverse;
+    int forwardreverse;
+    int forwardcoordinates;
+    int show_query_length;
+    int maxmatch;
 
     char* stats_file;
     char* dotfilename;
@@ -186,13 +185,13 @@ extern "C"
   int createMatchContext(Reference* ref,
                          QuerySet* queries,
                          MatchResults* matches,
-                         bool on_cpu,
+                         int on_cpu,
                          int min_match_length,
                          char* stats_file,
-                         bool reverse,
-                         bool forwardreverse,
-                         bool forwardcoordinates,
-                         bool showQueryLength,
+                         int reverse,
+                         int forwardreverse,
+                         int forwardcoordinates,
+                         int showQueryLength,
                          char* dotfilename,
                          char* texFilename,
                          MatchContext* ctx);
@@ -217,5 +216,7 @@ extern "C"
   float getTimerValue(char* ptr);
   void deleteTimer(char* ptr);
 
-}
+#ifdef __cplusplus
+]
+#endif
 #endif

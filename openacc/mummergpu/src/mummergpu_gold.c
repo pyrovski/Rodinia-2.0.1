@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <fstream>
 
 #define ulong4 uint32_t
 #define int2 int32_t
@@ -246,23 +245,16 @@ inline void set_result(unsigned int cur,
   }
 }
 
-inline void arrayToAddress(const unsigned char arr[3], unsigned int& addr) {
+inline unsigned int arrayToAddress(const unsigned char arr[3]) {
 #if REORDER_TREE
-  addr = (arr[0] | ((arr[2] & 0xF) << 8)) | ((arr[1] | ((arr[2] & 0xF0) << 4)) << 16);
+  return (arr[0] | ((arr[2] & 0xF) << 8)) | ((arr[1] | ((arr[2] & 0xF0) << 4)) << 16);
 #else
-  addr = MK3(arr);
+  return MK3(arr);
 #endif
 }
 
-template<typename T>
-inline T min(T x, T y) {
-  return x < y ? x : y;
-}
-
-template<typename T>
-inline T max(T x, T y) {
-  return x < y ? y : x;
-}
+#define min(a,b) ((a)<(b)?(a):(b))
+#define max(a,b) ((a)>=(b)?(a):(b))
 
 //! @todo OpenACC
 int kernel_gold(const int qryid,
@@ -298,7 +290,8 @@ int kernel_gold(const int qryid,
   SHIFT_QUERIES(queries, qryAddr);
 
   int last = qlen - min_match_len;
-  for (int qrystart = 0; qrystart <= last; qrystart++, result += RESULT_SPAN){
+  int qrystart;
+  for (qrystart = 0; qrystart <= last; qrystart++, result += RESULT_SPAN){
     //PixelOfNode node;
     unsigned int node_start;
     unsigned int prev;
@@ -324,16 +317,16 @@ int kernel_gold(const int qryid,
 
       switch (c) {
       case 'A':
-        arrayToAddress(children.a,cur);
+        cur = arrayToAddress(children.a);
         break;
       case 'C':
-        arrayToAddress(children.c,cur);
+        cur = arrayToAddress(children.c);
         break;
       case 'G':
-        arrayToAddress(children.g,cur);
+        cur = arrayToAddress(children.g);
         break;
       case 'T':
-        arrayToAddress(children.t,cur);
+        cur = arrayToAddress(children.t);
         break;
       default:
         cur = 0;
@@ -411,7 +404,7 @@ RECORD_RESULT: {
 NEXT_SUBSTRING: {
       PixelOfNode node;
       node = GETNODEHIST(prev, false);
-      arrayToAddress(node.suffix, cur);
+      cur = arrayToAddress(node.suffix);
     }
     //XPRINTF(" following suffix link. mustmatch:%d qry_match_len:%d sl:("fNID")\n",
     //       mustmatch, qry_match_len, NID(cur));
@@ -465,7 +458,6 @@ rc_kernel_gold(int qryid,
 }
 
 //! @todo this is the target function for OpenACC
-extern "C"
 void computeGold(MatchResults* results,
                  char* refstr,
                  char* queries,
@@ -484,7 +476,8 @@ void computeGold(MatchResults* results,
     //fprintf(stderr, "num of omp threads: %d\n", omp_get_num_threads());
 #pragma omp parallel for schedule(guided)
 #endif
-    for (int i = 0; i < numQueries; ++i) {
+    int i;
+    for (i = 0; i < numQueries; ++i) {
       rc_kernel_gold(i,
                      results,
                      refstr,
@@ -505,7 +498,8 @@ void computeGold(MatchResults* results,
     fprintf(stderr, "num of omp threads: %d\n", omp_get_num_threads());
 #pragma omp parallel for schedule(guided)
 #endif
-    for (int i = 0; i < numQueries; ++i) {
+    int i;
+    for (i = 0; i < numQueries; ++i) {
 
       /*
       int qryid,
