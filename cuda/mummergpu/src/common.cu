@@ -125,7 +125,7 @@ typedef struct  {
 } TextureAddress;
 
 // Store the start, end coordinate of node, and the parent, suffix links
-struct PixelOfNode {
+typedef struct {
   union {
     uint4 data;
     struct {
@@ -139,10 +139,10 @@ struct PixelOfNode {
       unsigned char pad;
     };
   };
-};
+} PixelOfNode;
 
 // If leafchar is 0, store the ACGT$ links, else store the leafid
-struct PixelOfChildren {
+typedef struct  {
   union {
     uint4 data;
 
@@ -164,9 +164,9 @@ struct PixelOfChildren {
       };
     };
   };
-};
+}PixelOfChildren;
 
-typedef struct MatchInfo {
+typedef struct  {
   unsigned int resultsoffset;
   unsigned int queryid;
   TextureAddress matchnode;
@@ -175,7 +175,7 @@ typedef struct MatchInfo {
   unsigned short qrystartpos;
 } MatchInfo;
 
-typedef struct Alignment {
+typedef struct  {
   int left_in_ref;
   unsigned short matchlen;
 } Alignment;
