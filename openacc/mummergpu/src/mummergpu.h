@@ -5,9 +5,11 @@
 #include <stdlib.h>
 #include "common.h"
 
-
-extern "C" {
-  struct QuerySet {
+#ifdef __cplusplus
+extern "C" 
+#endif
+{
+  typedef struct  {
     int qfile;
 
     char* h_tex_array;
@@ -24,17 +26,17 @@ extern "C" {
 
     // total device memory occupied by this query set
     size_t bytes_on_board;
-  };
+  } QuerySet;
 
 
-  struct AuxiliaryNodeData {
+  typedef struct  {
     int length;
     int numleaves;
     TextureAddress printParent;
-  };
+  }AuxiliaryNodeData;
 
 
-  struct Reference {
+  typedef struct {
     /* Reference string */
     char* str;
     size_t len;
@@ -72,7 +74,7 @@ extern "C" {
     AuxiliaryNodeData* aux_data;
     int num_nodes;
 
-  };
+  }Reference ;
 
 
 // Matches are reported as a node in the suffix tree,
@@ -80,7 +82,7 @@ extern "C" {
 // matches on the patch from the root to the node
 
 
-  struct MatchCoord {
+  typedef struct  {
     union {
       int2 data;
       struct {
@@ -88,9 +90,9 @@ extern "C" {
         int edge_match_length;  // number of missing characters UP the parent edge
       };
     };
-  };
+  }MatchCoord;
 
-  struct MatchResults {
+  typedef struct  {
     // Each MatchCoord in the buffers below corresponds to the first character
     // of some substring of one of the queries
     MatchCoord* d_match_coords;
@@ -108,10 +110,10 @@ extern "C" {
 
     // total device memory occupied by this query set
     size_t bytes_on_board;
-  };
+  }MatchResults;
 
 //All times in milliseconds
-  struct Statistics {
+  typedef struct  {
     float t_end_to_end;
     float t_match_kernel;
     float t_print_kernel;
@@ -136,9 +138,9 @@ extern "C" {
     int node_hist_size;
     int child_hist_size;
 #endif
-  };
+  }Statistics;
 
-  struct MatchContext {
+  typedef struct  {
     char* full_ref;
     size_t full_ref_len;
 
@@ -160,10 +162,10 @@ extern "C" {
     char* dotfilename;
     char* texfilename;
     Statistics statistics;
-  };
+  }MatchContext;
 
 
-  struct ReferencePage {
+  typedef struct  {
     int begin;
     int end;
     int shadow_left;
@@ -171,7 +173,7 @@ extern "C" {
     MatchResults results;
     unsigned int id;
     Reference ref;
-  };
+  }ReferencePage;
 
   TextureAddress id2addr(int id);
 
@@ -204,10 +206,10 @@ extern "C" {
   void printStringForError(int err);
 
 // Timer management
-  struct Timer_t {
+  typedef struct  {
     struct timeval start_m;
     struct timeval end_m;
-  };
+  }Timer_t;
 
   char* createTimer();
   void startTimer(char* ptr);

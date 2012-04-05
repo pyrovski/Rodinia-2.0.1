@@ -11,7 +11,7 @@
 #include <errno.h>
 #include <sys/time.h>
 
-#include <vector_types.h>
+#include "vector_types.h"
 
 // includes, kernels
 #include "common.h"
