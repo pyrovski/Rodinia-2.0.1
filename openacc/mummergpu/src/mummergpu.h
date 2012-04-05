@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include "common.cu"
+#include "common.h"
 
 
 extern "C" {
