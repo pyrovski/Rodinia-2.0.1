@@ -109,7 +109,7 @@ const int basecount = 5;
 #define TREE_ACCESS_HISTOGRAM 0
 
 // 4 bytes
-struct TextureAddress {
+typedef struct  {
   union {
     unsigned int data;
 
@@ -122,7 +122,7 @@ struct TextureAddress {
 #endif
     };
   };
-};
+} TextureAddress;
 
 // Store the start, end coordinate of node, and the parent, suffix links
 struct PixelOfNode {
