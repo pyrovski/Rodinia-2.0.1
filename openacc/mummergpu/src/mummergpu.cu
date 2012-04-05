@@ -11,15 +11,13 @@
 #include <errno.h>
 #include <sys/time.h>
 
-#include <cuda.h>
 #include <vector_types.h>
 
 // includes, kernels
-#include "common.cu"
+#include "common.h"
 #include "suffix-tree.h"
 
 #include "mummergpu.h"
-#include "mummergpu_kernel.cu"
 
 int USE_PRINT_KERNEL = 1;
 
@@ -31,75 +29,6 @@ unsigned int cuda_calls = 0;
 void trap_dbg() {
   fprintf(stderr, "Trapped\n");
 }
-
-#define CUDA_SAFE_CALL( call) do {                                           \
-	cuda_calls++;															 \
-    cudaError err = call;                                                    \
-    if( cudaSuccess != err) {                                                \
-        fprintf(stderr, "Cuda error in file '%s' in line %i : %d (%s).\n",        \
-                __FILE__, __LINE__, err, cudaGetErrorString( err) );              \
-				trap_dbg();												     \
-    exit(EXIT_FAILURE);                                                      \
-    } } while (0)
-
-#  define CU_SAFE_CALL_NO_SYNC( call ) do {                                  \
-    CUresult err = call;                                                     \
-    if( CUDA_SUCCESS != err) {                                               \
-        fprintf(stderr, "Cuda driver error %x in file '%s' in line %i.\n",   \
-                err, __FILE__, __LINE__ );                                   \
-        exit(EXIT_FAILURE);                                                  \
-    } } while (0)
-
-#  define CUT_DEVICE_INIT_DRV(cuDevice) do {                                 \
-    cuDevice = 0;                                                            \
-    int deviceCount = 0;                                                     \
-    CUresult err = cuInit(0);                                                \
-    if (CUDA_SUCCESS == err)                                                 \
-        CU_SAFE_CALL_NO_SYNC(cuDeviceGetCount(&deviceCount));                \
-    if (deviceCount == 0) {                                                  \
-        fprintf(stderr, "There is no device.\n");                            \
-        exit(EXIT_FAILURE);                                                  \
-    }                                                                        \
-    int dev;                                                                 \
-    for (dev = 0; dev < deviceCount; ++dev) {                                \
-        int major, minor;                                                    \
-        CU_SAFE_CALL_NO_SYNC(cuDeviceComputeCapability(&major, &minor, dev));\
-        if (major >= 1)                                                      \
-            break;                                                           \
-    }                                                                        \
-    if (dev == deviceCount) {                                                \
-        fprintf(stderr, "There is no device supporting CUDA.\n");            \
-        exit(EXIT_FAILURE);                                                  \
-    }                                                                        \
-    else                                                                     \
-        CU_SAFE_CALL_NO_SYNC(cuDeviceGet(&cuDevice, dev));                   \
-} while (0)
-
-unsigned int num_bind_tex_calls = 0;
-#define BIND_TEX(offset, tex, arr, desc, len) do {							 \
-	CUDA_SAFE_CALL(cudaBindTexture(offset, tex, arr, desc, len));			 \
-	++num_bind_tex_calls;													 \
-} while(0)
-
-#define BIND_TEX_ARRAY(tex, arr, desc) do {							 		 \
-	CUDA_SAFE_CALL(cudaBindTextureToArray(tex, arr, desc));					 \
-	++num_bind_tex_calls;													 \
-} while(0)
-
-#define CUDA_MALLOC(ptr, size) do {							 			 	 \
-	cudaMalloc(ptr, size);													 \
-	++num_bind_tex_calls;													 \
-} while(0)
-
-#define CUDA_MALLOC_PITCH(ptr, out_pitch, rowsize, numrows) do { 			 \
-	cudaMallocPitch(ptr, out_pitch, rowsize, numrows);						 \
-	++num_bind_tex_calls;													 \
-} while(0)
-
-#define CUDA_MALLOC_ARRAY(ptr, desc, pitch, rows) do {						 \
-	cudaMallocArray(ptr, desc, pitch, rows);					 			 \
-	++num_bind_tex_calls;													 \
-} while(0)
 
 ////////////////////////////////////////////////////////////////////////////////
 // declaration, forward
@@ -447,18 +376,6 @@ void buildReferenceTexture(Reference* ref,
 
 }
 
-void boardMemory(size_t * free_mem, size_t * total_mem) {
-  // The emulator doesn't allow calls to cuMemGetInfo
-
-#ifdef __DEVICE_EMULATION__
-  *free_mem =  512*1024*1024;
-  *total_mem = 768*1024*1024;
-#else
-  CU_SAFE_CALL_NO_SYNC(cuMemGetInfo(free_mem, total_mem));
-#endif
-}
-
-
 void loadReferenceTexture(MatchContext* ctx) {
   Reference* ref = ctx->ref;
   int numrows = ceil(ref->len / ((float)ref->pitch));
@@ -469,82 +386,7 @@ void loadReferenceTexture(MatchContext* ctx) {
     cudaCreateChannelDesc(8, 0, 0, 0, cudaChannelFormatKindSigned);
 
   if (!ctx->on_cpu) {
-    char * toboardtimer = createTimer();
-    startTimer(toboardtimer);
 
-#if REFTEX
-#if REORDER_REF
-
-    CUDA_MALLOC_ARRAY((cudaArray**)(&ref->d_ref_array),
-                      &refTextureDesc,
-                      ref->pitch,
-                      numrows);
-
-
-    CUDA_SAFE_CALL(cudaMemcpyToArray( (cudaArray*)(ref->d_ref_array),
-                                      0,
-                                      0,
-                                      ref->h_ref_array,
-                                      numrows*ref->pitch,
-                                      cudaMemcpyHostToDevice));
-
-    reftex.addressMode[0] = cudaAddressModeClamp;
-    reftex.addressMode[1] = cudaAddressModeClamp;
-    reftex.filterMode = cudaFilterModePoint;
-    reftex.normalized = false;
-
-    BIND_TEX_ARRAY(reftex, (cudaArray*)ref->d_ref_array, refTextureDesc);
-
-    ctx->ref->bytes_on_board += numrows * ref->pitch;
-#else
-
-    CUDA_MALLOC( (void**)(&ref->d_ref_array), ref->len);
-    CUDA_SAFE_CALL( cudaMemcpy( (void*)(ref->d_ref_array),
-                                ref->str,
-                                ref->len,
-                                cudaMemcpyHostToDevice) );
-
-    reftex.addressMode[0] = cudaAddressModeClamp;
-    reftex.filterMode = cudaFilterModePoint;
-    reftex.normalized = false;    // access with normalized texture coordinates
-    cudaChannelFormatDesc refDesc =
-      cudaCreateChannelDesc(8,0,0,0, cudaChannelFormatKindUnsigned);
-    BIND_TEX(0, reftex, (void*)(ref->d_ref_array), refDesc, ref->len);
-
-    ctx->ref->bytes_on_board += ref->len;
-#endif
-
-
-#else
-#if REORDER_REF
-    size_t refpitch;
-
-    CUDA_MALLOC_PITCH( (void**)(&ref->d_ref_array),
-                       &refpitch,
-                       ref->pitch * sizeof(char),
-                       numrows);
-    CUDA_SAFE_CALL( cudaMemcpy2D((ref->d_ref_array),
-                                 refpitch,
-                                 ref->h_ref_array,
-                                 ref->pitch ,
-                                 ref->pitch  * sizeof(char),
-                                 numrows,
-                                 cudaMemcpyHostToDevice));
-
-    ctx->ref->bytes_on_board += numrows * ref->pitch;
-#else
-    CUDA_MALLOC( (void**)(&ref->d_ref_array), ref->len);
-    CUDA_SAFE_CALL( cudaMemcpy( (void*)(ref->d_ref_array),
-                                ref->str,
-                                ref->len,
-                                cudaMemcpyHostToDevice) );
-
-    ctx->ref->bytes_on_board += ref->len;
-#endif
-#endif
-    stopTimer(toboardtimer);
-    ctx->statistics.t_ref_str_to_board += getTimerValue(toboardtimer);
-    deleteTimer(toboardtimer);
   } else {
     ref->d_ref_array = NULL;
   }
@@ -552,73 +394,9 @@ void loadReferenceTexture(MatchContext* ctx) {
 
 
 void unloadReferenceString(Reference* ref) {
-#if REFTEX
-  CUDA_SAFE_CALL(cudaUnbindTexture( reftex ) );
-#endif
-
-#if REORDER_REF && REFTEX
-  CUDA_SAFE_CALL(cudaFreeArray((cudaArray*)(ref->d_ref_array)));
-#else
-  CUDA_SAFE_CALL(cudaFree((ref->d_ref_array)));
-#endif
-
   ref->d_ref_array = NULL;
 }
 
-void unloadReferenceTree(MatchContext* ctx) {
-  Reference* ref = ctx->ref;
-
-#if REORDER_TREE
-  // Unload nodetex
-#if NODETEX
-  CUDA_SAFE_CALL(cudaUnbindTexture( nodetex ) );
-  CUDA_SAFE_CALL(cudaFreeArray((cudaArray*)(ref->d_node_tex_array)));
-#else
-  CUDA_SAFE_CALL(cudaFree(ref->d_node_tex_array));
-#endif
-  ref->d_node_tex_array = NULL;
-
-  // Unload childrentex
-  if (ref->d_children_tex_array) {
-#if CHILDTEX
-    CUDA_SAFE_CALL(cudaUnbindTexture( childrentex ) );
-    CUDA_SAFE_CALL(cudaFreeArray((cudaArray*)(ref->d_children_tex_array)));
-#else
-    CUDA_SAFE_CALL(cudaFree(ref->d_children_tex_array));
-#endif
-  }
-
-  ref->d_children_tex_array = NULL;
-#else
-
-#if NODETEX
-  CUDA_SAFE_CALL(cudaUnbindTexture( nodetex ) );
-#endif
-  CUDA_SAFE_CALL(cudaFree(ref->d_node_tex_array));
-
-  ref->d_node_tex_array = NULL;
-
-  // Unload childrentex
-  if (ref->d_children_tex_array) {
-#if CHILDTEX
-    CUDA_SAFE_CALL(cudaUnbindTexture( childrentex ) );
-#endif
-
-    CUDA_SAFE_CALL(cudaFree(ref->d_children_tex_array));
-    ref->d_children_tex_array = NULL;
-  }
-
-#endif
-
-#if TREE_ACCESS_HISTOGRAM
-  CUDA_SAFE_CALL(cudaFree(ref->d_node_hist));
-  ref->d_node_hist = NULL;
-
-  CUDA_SAFE_CALL(cudaFree(ref->d_child_hist));
-  ref->d_child_hist = NULL;
-#endif
-
-}
 
 //loads a tree and text for [begin, end) in the reference
 void loadReference(MatchContext* ctx) {
@@ -630,238 +408,7 @@ void loadReference(MatchContext* ctx) {
   loadReferenceTexture(ctx);
 
   if (!ctx->on_cpu) {
-    char * toboardtimer = createTimer();
-    startTimer(toboardtimer);
 
-    // node texels
-    ref->bytes_on_board += ref->tex_width * ref->tex_node_height * (sizeof(PixelOfNode));
-
-    // children texels
-    ref->bytes_on_board += ref->tex_width * ref->tex_children_height * sizeof(PixelOfChildren);
-
-#if REORDER_TREE
-
-#if NODETEX
-    cudaChannelFormatDesc nodeTextureDesc =
-      cudaCreateChannelDesc(32, 32, 32, 32, cudaChannelFormatKindUnsigned);
-
-    CUDA_MALLOC_ARRAY( (cudaArray**)(&ref->d_node_tex_array),
-                       &nodeTextureDesc,
-                       ref->tex_width,
-                       ref->tex_node_height );
-
-
-
-    CUDA_SAFE_CALL( cudaMemcpyToArray( (cudaArray*)(ref->d_node_tex_array),
-                                       0,
-                                       0,
-                                       ref->h_node_tex_array,
-                                       ref->tex_width * ref->tex_node_height * sizeof(PixelOfNode),
-                                       cudaMemcpyHostToDevice));
-
-    nodetex.addressMode[0] = cudaAddressModeClamp;
-    nodetex.addressMode[1] = cudaAddressModeClamp;
-    nodetex.filterMode = cudaFilterModePoint;
-    nodetex.normalized = false;    // access with normalized texture coordinates
-
-    BIND_TEX_ARRAY(nodetex, (cudaArray*)ref->d_node_tex_array,
-                   nodeTextureDesc);
-#else
-    size_t nodepitch;
-
-    CUDA_MALLOC_PITCH( (void**)(&ref->d_node_tex_array),
-                       &nodepitch,
-                       ref->tex_width * sizeof(PixelOfNode),
-                       ref->tex_node_height );
-    CUDA_SAFE_CALL( cudaMemcpy2D((ref->d_node_tex_array),
-                                 nodepitch,
-                                 ref->h_node_tex_array,
-                                 nodepitch,
-                                 ref->tex_width * sizeof(PixelOfNode),
-                                 ref->tex_node_height,
-                                 cudaMemcpyHostToDevice));
-
-#endif
-
-    if (ref->tex_children_height) {
-#if CHILDTEX
-      cudaChannelFormatDesc childrenTextureDesc =
-        cudaCreateChannelDesc(32, 32, 32, 32, cudaChannelFormatKindUnsigned);
-      CUDA_MALLOC_ARRAY( (cudaArray**)(&ref->d_children_tex_array),
-                         &childrenTextureDesc,
-                         ref->tex_width,
-                         ref->tex_children_height );
-
-      CUDA_SAFE_CALL( cudaMemcpyToArray((cudaArray*)(ref->d_children_tex_array),
-                                        0,
-                                        0,
-                                        ref->h_children_tex_array,
-                                        ref->tex_width * ref->tex_children_height * sizeof(PixelOfChildren),
-                                        cudaMemcpyHostToDevice));
-
-      childrentex.addressMode[0] = cudaAddressModeClamp;
-      childrentex.addressMode[1] = cudaAddressModeClamp;
-      childrentex.filterMode = cudaFilterModePoint;
-      childrentex.normalized = false;    // access with normalized texture coordinates
-
-      BIND_TEX_ARRAY(childrentex, (cudaArray*)(ref->d_children_tex_array),
-                     childrenTextureDesc);
-#else
-      size_t childpitch;
-
-      CUDA_MALLOC_PITCH( (void**)(&ref->d_children_tex_array),
-                         &childpitch,
-                         ref->tex_width * sizeof(PixelOfChildren),
-                         ref->tex_children_height );
-      CUDA_SAFE_CALL( cudaMemcpy2D((ref->d_children_tex_array),
-                                   childpitch,
-                                   ref->h_children_tex_array,
-                                   childpitch,
-                                   ref->tex_width * sizeof(PixelOfNode),
-                                   ref->tex_children_height,
-                                   cudaMemcpyHostToDevice));
-#endif
-    }
-
-#if TREE_ACCESS_HISTOGRAM
-    // node hist
-    ref->bytes_on_board += ref->tex_width * ref->tex_node_height * sizeof(int);
-
-    CUDA_MALLOC( (void**)(&ref->d_node_hist),
-                 ref->tex_width * ref->tex_node_height *sizeof(int));
-    CUDA_SAFE_CALL( cudaMemset((ref->d_node_hist),0,
-                               ref->tex_width * ref->tex_node_height * sizeof(int)));
-
-    if (ref->tex_children_height) {
-      // children hist
-      ref->bytes_on_board += ref->tex_width * ref->tex_children_height * sizeof(int);
-      fprintf(stderr, "after child_hist  ref->bytes_on_board:%ld\n", ref->bytes_on_board);
-      CUDA_MALLOC( (void**)(&ref->d_child_hist),
-                   ref->tex_width * ref->tex_children_height *sizeof(int));
-      CUDA_SAFE_CALL( cudaMemset((ref->d_child_hist),0,
-                                 ref->tex_width * ref->tex_children_height * sizeof(int)));
-    }
-#endif
-
-#else // NO TREE REORDERING
-
-    // Node tex, 1-dimensional
-    CUDA_MALLOC( (void**)(&ref->d_node_tex_array),
-                 ref->tex_node_height * sizeof(PixelOfNode));
-
-    CUDA_SAFE_CALL( cudaMemcpy( (ref->d_node_tex_array),
-                                ref->h_node_tex_array,
-                                ref->tex_node_height * sizeof(PixelOfNode),
-                                cudaMemcpyHostToDevice));
-#if NODETEX
-    cudaChannelFormatDesc nodeTextureDesc =
-      cudaCreateChannelDesc(32, 32, 32, 32, cudaChannelFormatKindUnsigned);
-    nodetex.addressMode[0] = cudaAddressModeClamp;
-    nodetex.filterMode = cudaFilterModePoint;
-    nodetex.normalized = false;    // access with normalized texture coordinates
-
-    BIND_TEX(0, nodetex, (void*)(ref->d_node_tex_array), nodeTextureDesc,
-             ref->tex_node_height* sizeof(PixelOfNode));
-#endif
-    if (ref->tex_children_height) {
-      // Child tex, 1-dimensional
-      CUDA_MALLOC( (void**)(&ref->d_children_tex_array),
-                   ref->tex_children_height * sizeof(PixelOfChildren));
-
-      CUDA_SAFE_CALL( cudaMemcpy( (ref->d_children_tex_array),
-                                  ref->h_children_tex_array,
-                                  ref->tex_children_height * sizeof(PixelOfChildren),
-                                  cudaMemcpyHostToDevice));
-#if CHILDTEX
-      cudaChannelFormatDesc childTextureDesc =
-        cudaCreateChannelDesc(32, 32, 32, 32, cudaChannelFormatKindUnsigned);
-      childrentex.addressMode[0] = cudaAddressModeClamp;
-      childrentex.filterMode = cudaFilterModePoint;
-      childrentex.normalized = false;    // access with normalized texture coordinates
-
-      BIND_TEX(0, childrentex, (void*)(ref->d_children_tex_array),
-               childTextureDesc, ref->tex_children_height* sizeof(PixelOfChildren));
-#endif
-    }
-
-#if TREE_ACCESS_HISTOGRAM
-    ref->bytes_on_board += ref->tex_node_height * sizeof(int);
-    CUDA_MALLOC( (void**)(&ref->d_node_hist),
-                 ref->tex_node_height *sizeof(int));
-    CUDA_SAFE_CALL( cudaMemset((ref->d_node_hist),0,
-                               ref->tex_node_height * sizeof(int)));
-
-    if (ref->tex_children_height) {
-      ref->bytes_on_board += ref->tex_children_height * sizeof(int);
-      CUDA_MALLOC( (void**)(&ref->d_child_hist),
-                   ref->tex_children_height *sizeof(int));
-      CUDA_SAFE_CALL( cudaMemset((ref->d_child_hist),0,
-                                 ref->tex_children_height * sizeof(int)));
-    }
-#endif
-
-#endif
-
-
-#if TWO_LEVEL_NODE_TREE
-    PixelOfNode node_buf[NODE_THRESH];
-    memset(node_buf, 0, sizeof(node_buf));
-    for (unsigned int i = 0; (i < NODE_THRESH) && (i < ref->num_nodes); ++i) {
-      TextureAddress myaddress(id2addr(i));
-
-#if MERGETEX && REORDER_TREE
-      myaddress.x &= 0x7FF;
-      myaddress.x *= 2;
-
-      int loc = myaddress.x + myaddress.y*MAX_TEXTURE_DIMENSION;
-      node_buf[i]= ((PixelOfNode*)(ref->h_node_tex_array))[loc];
-
-#elif REORDER_TREE
-      int loc = myaddress.x + myaddress.y*MAX_TEXTURE_DIMENSION;
-      node_buf[i]= ((PixelOfNode*)(ref->h_node_tex_array))[loc];
-
-#elif MERGETEX
-      node_buf[i]= ((PixelOfNode*)(ref->h_node_tex_array))[myaddress.x*2];
-#else
-      node_buf[i]= ((PixelOfNode*)(ref->h_node_tex_array))[myaddress.x];
-#endif
-
-    }
-
-    CUDA_SAFE_CALL( cudaMemcpyToSymbol(node_tree_top, node_buf, sizeof(node_buf)));
-#endif
-
-#if TWO_LEVEL_CHILD_TREE
-    PixelOfChildren child_buf[CHILD_THRESH];
-    memset(child_buf, 0, sizeof(child_buf));
-    for (unsigned int i = 0; (i < CHILD_THRESH) && (i < ref->num_nodes); ++i) {
-      TextureAddress myaddress(id2addr(i));
-
-#if MERGETEX && REORDER_TREE
-      myaddress.x &= 0x7FF;
-      myaddress.x *= 2;
-
-      int loc = myaddress.x + myaddress.y*MAX_TEXTURE_DIMENSION;
-      child_buf[i]= ((PixelOfChildren*)(ref->h_node_tex_array))[loc+1];
-
-#elif REORDER_TREE
-      int loc = myaddress.x + myaddress.y*MAX_TEXTURE_DIMENSION;
-      child_buf[i]= ((PixelOfChildren*)(ref->h_children))[loc];
-
-#elif MERGETEX
-      child_buf[i]= ((PixelOfChildren*)(ref->h_node_tex_array))[myaddress.x*2+1];
-#else
-      child_buf[i]= ((PixelOfChildren*)(ref->h_children_tex_array))[myaddress.x];
-#endif
-    }
-
-    CUDA_SAFE_CALL( cudaMemcpyToSymbol(child_tree_top, child_buf, sizeof(child_buf)));
-#endif
-    stopTimer(toboardtimer);
-    ctx->statistics.t_tree_to_board += getTimerValue(toboardtimer);
-    deleteTimer(toboardtimer);
-
-    fprintf(stderr, "done\n");
   } else {
     ref->d_node_tex_array = NULL;
     ref->d_children_tex_array = NULL;
@@ -883,56 +430,6 @@ void loadQueries(MatchContext* ctx) {
   unsigned int numQueries = queries->count;
 
   if (!ctx->on_cpu) {
-    fprintf(stderr, "Allocating device memory for queries... ");
-
-    char* toboardtimer = createTimer();
-    startTimer(toboardtimer);
-
-    dumpQueryBlockInfo(queries);
-    CUDA_MALLOC((void**) &queries->d_tex_array, queries->texlen);
-    \
-
-
-    queries->bytes_on_board += queries->texlen;
-
-    CUDA_SAFE_CALL( cudaMemcpy((void*) queries->d_tex_array,
-                               queries->h_tex_array + queries->h_addrs_tex_array[0],
-                               queries->texlen,
-                               cudaMemcpyHostToDevice));
-
-#if QRYTEX
-    qrytex.addressMode[0] = cudaAddressModeClamp;
-    qrytex.filterMode = cudaFilterModePoint;
-    qrytex.normalized = false;    // access with normalized texture coordinates
-    cudaChannelFormatDesc qryDesc =
-      cudaCreateChannelDesc(8,0,0,0, cudaChannelFormatKindUnsigned);
-    BIND_TEX(0, qrytex, (void*)(queries->d_tex_array), qryDesc,
-             queries->texlen);
-#endif
-    CUDA_MALLOC((void**) &queries->d_addrs_tex_array,
-                numQueries * sizeof(int));
-
-    queries->bytes_on_board += numQueries * sizeof(int);
-
-    CUDA_SAFE_CALL( cudaMemcpy((void*) queries->d_addrs_tex_array,
-                               queries->h_addrs_tex_array,
-                               numQueries * sizeof(int),
-                               cudaMemcpyHostToDevice));
-
-    CUDA_MALLOC((void**) &queries->d_lengths_array,
-                numQueries * sizeof(int));
-
-    queries->bytes_on_board += numQueries * sizeof(int);
-
-    CUDA_SAFE_CALL( cudaMemcpy((void*) queries->d_lengths_array,
-                               queries->h_lengths_array,
-                               numQueries * sizeof(int),
-                               cudaMemcpyHostToDevice));
-    stopTimer(toboardtimer);
-    ctx->statistics.t_queries_to_board += getTimerValue(toboardtimer);
-    deleteTimer(toboardtimer);
-
-    fprintf(stderr, "\tallocated %ld bytes\n", queries->bytes_on_board);
 
   } else {
     queries->d_addrs_tex_array = NULL;
@@ -944,21 +441,6 @@ void loadQueries(MatchContext* ctx) {
 
 }
 
-
-void unloadQueries(MatchContext* ctx) {
-  QuerySet* queries = ctx->queries;
-
-  CUDA_SAFE_CALL(cudaFree(queries->d_tex_array));
-  queries->d_tex_array = NULL;
-
-  CUDA_SAFE_CALL(cudaFree(queries->d_addrs_tex_array));
-  queries->d_addrs_tex_array = NULL;
-
-  CUDA_SAFE_CALL(cudaFree(queries->d_lengths_array));
-  queries->d_lengths_array = NULL;
-
-  queries->bytes_on_board = 0;
-}
 
 // Computes the location of the first MatchCoord for a given query.  NOTE:
 // Do NOT use this function if COALESCED_QUERIES == 1
@@ -1038,8 +520,6 @@ void loadResultBuffer(MatchContext* ctx) {
   size_t boardFreeMemory = 0;
   size_t total_mem = 0;
 
-  boardMemory(&boardFreeMemory, &total_mem);
-
   fprintf(stderr,"board free memory: %ld total memory: %ld\n",
           boardFreeMemory, total_mem);
 
@@ -1054,32 +534,7 @@ void loadResultBuffer(MatchContext* ctx) {
   }
 
   if (!ctx->on_cpu) {
-    char* toboardtimer = createTimer();
-    startTimer(toboardtimer);
 
-    ctx->results.bytes_on_board = 0;
-
-    CUDA_MALLOC( (void**) &ctx->results.d_match_coords,
-                 numCoords * sizeof(MatchCoord));
-    ctx->results.bytes_on_board += numCoords * sizeof(MatchCoord);
-
-    CUDA_SAFE_CALL( cudaMemset( (void*)ctx->results.d_match_coords, 0,
-                                numCoords * sizeof(MatchCoord)));
-
-#if COALESCED_QUERIES
-    CUDA_MALLOC((void**) &ctx->results.d_coord_tex_array,
-                numQueries * sizeof(int));
-
-    ctx->results.bytes_on_board += numQueries * sizeof(int);
-
-    CUDA_SAFE_CALL( cudaMemcpy((void*) ctx->results.d_coord_tex_array,
-                               ctx->results.h_coord_tex_array,
-                               numQueries * sizeof(int),
-                               cudaMemcpyHostToDevice));
-#endif
-    stopTimer(toboardtimer);
-    ctx->statistics.t_match_coords_to_board += getTimerValue(toboardtimer);
-    deleteTimer(toboardtimer);
   } else {
     ctx->results.d_match_coords = NULL;
   }
@@ -1088,71 +543,6 @@ void loadResultBuffer(MatchContext* ctx) {
 }
 
 
-void unloadResultBuffer(MatchContext* ctx) {
-  CUDA_SAFE_CALL(cudaFree(ctx->results.d_match_coords));
-  ctx->results.d_match_coords = NULL;
-  ctx->results.bytes_on_board = 0;
-
-#if COALESCED_QUERIES
-  CUDA_SAFE_CALL(cudaFree(ctx->results.d_match_coords));
-#endif
-}
-
-void transferResultsFromDevice(MatchContext* ctx) {
-  if (!ctx->on_cpu) {
-    char* fromboardtimer = createTimer();
-    startTimer(fromboardtimer);
-
-    CUDA_SAFE_CALL(cudaMemcpy(ctx->results.h_match_coords,
-                              ctx->results.d_match_coords,
-                              ctx->results.numCoords * sizeof(MatchCoord),
-                              cudaMemcpyDeviceToHost) );
-
-
-#if TREE_ACCESS_HISTOGRAM
-    CUDA_SAFE_CALL(cudaMemcpy(ctx->ref->h_node_hist,
-                              ctx->ref->d_node_hist,
-                              ctx->ref->tex_node_height * ctx->ref->tex_width * sizeof(int),
-                              cudaMemcpyDeviceToHost) );
-
-    CUDA_SAFE_CALL(cudaMemcpy(ctx->ref->h_child_hist,
-                              ctx->ref->d_child_hist,
-                              ctx->ref->tex_children_height * ctx->ref->tex_width * sizeof(int),
-                              cudaMemcpyDeviceToHost) );
-
-    if (ctx->statistics.node_hist_size < ctx->ref->tex_width * ctx->ref->tex_node_height) {
-      int* temp = (int*)calloc(ctx->ref->tex_width * ctx->ref->tex_node_height, sizeof(int));
-      if (ctx->statistics.node_hist_size)
-        memcpy(temp, ctx->statistics.node_hist, ctx->statistics.node_hist_size * sizeof(int));
-      ctx->statistics.node_hist = temp;
-      ctx->statistics.node_hist_size = ctx->ref->tex_width * ctx->ref->tex_node_height;
-    }
-
-    if (ctx->statistics.child_hist_size < ctx->ref->tex_width * ctx->ref->tex_children_height) {
-      temp = (int*)calloc(ctx->ref->tex_width * ctx->ref->tex_children_height, sizeof(int));
-      if (ctx->statistics.hist_size)
-        memcpy(temp, ctx->statistics.child_hist, ctx->statistics.hist_size * sizeof(int));
-
-      ctx->statistics.child_hist = temp;
-      ctx->statistics.child_hist_size = ctx->ref->tex_width * ctx->ref->tex_children_height;
-    }
-
-    for (unsigned int i = 0; i < ctx->statistics.node_hist_size; ++i) {
-      ctx->statistics.node_hist[i] += ctx->ref->h_node_hist[i];
-    }
-
-    for (unsigned int i = 0; i < ctx->statistics.child_hist_size; ++i) {
-      ctx->statistics.child_hist[i] += ctx->ref->h_child_hist[i];
-    }
-
-#endif
-
-    stopTimer(fromboardtimer);
-    ctx->statistics.t_match_coords_from_board += getTimerValue(fromboardtimer);
-    deleteTimer(fromboardtimer);
-  }
-
-}
 
 
 int flushOutput();
@@ -1288,120 +678,6 @@ void coordsToPrintBuffers(MatchContext* ctx,
 }
 
 
-void runPrintKernel(MatchContext* ctx,
-                    ReferencePage* page,
-                    MatchInfo* h_matches,
-                    unsigned int numMatches,
-                    Alignment* alignments,
-                    unsigned int numAlignments) {
-
-  MatchInfo* d_matches;
-  size_t matchesSize = numMatches * sizeof(MatchInfo);
-  CUDA_MALLOC((void**) &d_matches, matchesSize);
-
-  struct Alignment * d_alignments;
-  size_t alignmentSize = numAlignments * sizeof(Alignment);
-  CUDA_MALLOC((void**) &d_alignments, alignmentSize);
-  CUDA_SAFE_CALL(cudaMemset((void*)   d_alignments, 0, alignmentSize));
-
-  char*  atimer = createTimer();
-  startTimer(atimer);
-  // Copy matches to card
-  fprintf(stderr, "prepared %d matches %d alignments\n", numMatches, numAlignments);
-  fprintf(stderr, "Copying %ld bytes to host memory for %d alignments\n",
-          numAlignments * sizeof(Alignment), numAlignments);
-
-  int DEBUG = 0;
-  if (DEBUG) {
-    for (int i = 0; i < numMatches; i++) {
-      printf("m[%d]:\t%d\t%d\t%d\t%d\t%d\t%d\n",
-             i,
-             h_matches[i].resultsoffset,
-             h_matches[i].queryid,
-             h_matches[i].matchnode.data,
-             h_matches[i].numLeaves,
-             h_matches[i].edgematch,
-             h_matches[i].qrystartpos);
-    }
-
-    exit(0);
-  }
-
-  CUDA_SAFE_CALL(cudaMemcpy(d_matches, h_matches, matchesSize, cudaMemcpyHostToDevice));
-  stopTimer(atimer);
-  float mtime =  getTimerValue(atimer);
-  // Launch the kernel
-
-  int blocksize = (numMatches > BLOCKSIZE) ? BLOCKSIZE : numMatches;
-
-  dim3 dimBlock(blocksize, 1, 1);
-  dim3 dimGrid(ceil(numMatches / (float)BLOCKSIZE), 1, 1);
-
-  fprintf(stderr, "  Calling print kernel... ");
-
-  printKernel <<< dimGrid, dimBlock, 0 >>> (d_matches,
-      numMatches,
-      d_alignments,
-
-#if COALESCED_QUERIES
-      ctx->results.d_coord_tex_array,
-#endif
-
-#if !QRYTEX
-#if COALESCED_QUERIES
-      (int*)
-#endif
-      ctx->queries->d_tex_array,
-#endif
-
-#if !NODETEX
-      (_PixelOfNode*)ctx->ref->d_node_tex_array,
-#endif
-#if !CHILDTEX
-      (_PixelOfChildren*)ctx->ref->d_children_tex_array,
-#endif
-      ctx->queries->d_addrs_tex_array,
-      ctx->queries->d_lengths_array,
-      page->begin,
-      page->end,
-      page->shadow_left,
-      page->shadow_right,
-      ctx->min_match_length
-
-#if TREE_ACCESS_HISTOGRAM
-      , ctx->ref->d_node_hist,
-      ctx->ref->d_child_hist
-#endif
-                                           );
-
-  cudaThreadSynchronize();
-
-
-
-  cudaError_t err = cudaGetLastError();
-  if ( cudaSuccess != err) {
-    fprintf(stderr, "Kernel execution failed: %s.\n",
-            cudaGetErrorString(err));
-    exit(EXIT_FAILURE);
-  }
-
-  startTimer(atimer);
-  // Copy the results back to the host
-  CUDA_SAFE_CALL(cudaMemcpy((void*)alignments,
-                            (void*)d_alignments,
-                            alignmentSize,
-                            cudaMemcpyDeviceToHost));
-  cudaThreadSynchronize();
-  stopTimer(atimer);
-
-  float atime = getTimerValue(atimer);
-  fprintf(stderr, "memcpy time= %f\n", atime + mtime);
-  deleteTimer(atimer);
-  // Cleanup
-  CUDA_SAFE_CALL(cudaFree(d_alignments));
-  CUDA_SAFE_CALL(cudaFree(d_matches));
-}
-
 // TODO: need reverse-complement printing support
 void runPrintOnCPU(MatchContext* ctx, ReferencePage* page,
                    MatchInfo* h_matches,
@@ -1451,15 +727,10 @@ void getExactAlignments(MatchContext * ctx, ReferencePage * page, bool on_cpu) {
   assert(!ctx->reverse && !ctx->forwardreverse);
 
   size_t boardFreeMemory;
-  size_t total_mem;
 
   if (!on_cpu) {
-    boardMemory(&boardFreeMemory, &total_mem);
-    fprintf(stderr, "board free memory: %lu total memory: %lu\n",
-            boardFreeMemory, total_mem);
   } else {
     boardFreeMemory = 256 * 1024 * 1024;
-    total_mem = boardFreeMemory;
   }
 
 #ifdef __DEVICE_EMULATION__
@@ -1509,21 +780,12 @@ void getExactAlignments(MatchContext * ctx, ReferencePage * page, bool on_cpu) {
     rTotalAlignments += numAlignments;
     rTotalMatches += numMatches;
 
-    if (num_bind_tex_calls > 100) {
-      cudaThreadExit();
-      num_bind_tex_calls = 0;
-      loadReference(ctx);
-      loadQueries(ctx);
-    }
-
     char* ktimer = createTimer();
     startTimer(ktimer);
     if (on_cpu) {
       runPrintOnCPU(ctx, page, h_matches, numMatches,
                     h_alignments, numAlignments);
     } else {
-      runPrintKernel(ctx, page, h_matches, numMatches,
-                     h_alignments, numAlignments);
     }
     stopTimer(ktimer);
 
@@ -1845,71 +1107,6 @@ void matchOnCPU(MatchContext* ctx, bool doRC) {
   }
 }
 
-void matchOnGPU(MatchContext* ctx, bool doRC) {
-  int numQueries = ctx->queries->count;
-  int blocksize = (numQueries > BLOCKSIZE) ? BLOCKSIZE : numQueries;
-
-  dim3 dimBlock(blocksize, 1, 1);
-
-  dim3 dimGrid(ceil(numQueries / (float)BLOCKSIZE), 1, 1);
-
-  // Match the reverse complement of the queries to the ref
-  if (doRC) {
-    //TODO: GPU RC is disabled
-    mummergpuRCKernel <<< dimGrid, dimBlock, 0 >>> (ctx->results.d_match_coords,
-        ctx->queries->d_tex_array,
-        ctx->queries->d_addrs_tex_array,
-        ctx->queries->d_lengths_array,
-        numQueries,
-        ctx->min_match_length);
-  } else {
-    mummergpuKernel <<< dimGrid, dimBlock, 0 >>> (ctx->results.d_match_coords,
-#if COALESCED_QUERIES
-        ctx->results.d_coord_tex_array,
-#endif
-
-#if !QRYTEX
-#if COALESCED_QUERIES
-        (int*)
-#endif
-        ctx->queries->d_tex_array,
-#endif
-
-#if !NODETEX
-        (_PixelOfNode*)(ctx->ref->d_node_tex_array),
-#endif
-
-#if !CHILDTEX
-        (_PixelOfChildren*)(ctx->ref->d_children_tex_array),
-#endif
-
-#if !REFTEX
-        (char*)ctx->ref->d_ref_array,
-#endif
-        ctx->queries->d_addrs_tex_array,
-        ctx->queries->d_lengths_array,
-        numQueries,
-        ctx->min_match_length
-#if TREE_ACCESS_HISTOGRAM
-        , ctx->ref->d_node_hist,
-        ctx->ref->d_child_hist
-#endif
-                                                 );
-  }
-
-  // check if kernel execution generated an error
-  cudaError_t err = cudaGetLastError();
-  if ( cudaSuccess != err) {
-    fprintf(stderr, "Kernel execution failed: %s.\n",
-            cudaGetErrorString(err));
-    exit(EXIT_FAILURE);
-  }
-}
-
-void getMatchResults(MatchContext* ctx,
-                     unsigned int page_num) {
-  transferResultsFromDevice(ctx);
-}
 
 void matchQueryBlockToReferencePage(MatchContext* ctx,
                                     ReferencePage* page,
@@ -1926,9 +1123,6 @@ void matchQueryBlockToReferencePage(MatchContext* ctx,
     matchOnCPU(ctx, reverse_complement);
   } else {
 
-    matchOnGPU(ctx, reverse_complement);
-    cudaThreadSynchronize();
-
   }
   stopTimer(ktimer);
 
@@ -1937,8 +1131,6 @@ void matchQueryBlockToReferencePage(MatchContext* ctx,
   fprintf(stderr, "match kernel time= %f\n", ktime);
   deleteTimer(ktimer);
 
-  getMatchResults(ctx, page->id);
-  unloadResultBuffer(ctx);
 }
 
 
@@ -1961,32 +1153,23 @@ int matchSubset(MatchContext* ctx,
   matchQueryBlockToReferencePage(ctx, page, false);
 
   if (USE_PRINT_KERNEL && !ctx->on_cpu) {
-    getExactAlignments(ctx, page, false);
   } else {
     getExactAlignments(ctx, page, true);
   }
 
   flushOutput();
-  unloadQueries(ctx);
   return 0;
 }
 
 int getFreeDeviceMemory(bool on_cpu) {
   size_t free_mem = 0;
-  size_t total_mem = 0;
 
   // We have to 'prime' CUDA by making an allocation here.  cuMemGetInfo
   // will return zeroes until we do a malloc.
-  int * p = NULL;
-  CUDA_SAFE_CALL(cudaMalloc((void**)&p, sizeof(int)));
-  CUDA_SAFE_CALL(cudaFree(p));
   if (!on_cpu) {
 
-    boardMemory(&free_mem, &total_mem);
-    fprintf(stderr, "board free memory: %lu total memory: %lu\n",
-            free_mem, total_mem);
   } else {
-    total_mem = free_mem = 804585472; // pretend we are on a 8800 GTX
+    free_mem = 804585472; // pretend we are on a 8800 GTX
   }
 
   return free_mem;
@@ -2006,15 +1189,9 @@ int matchQueriesToReferencePage(MatchContext* ctx, ReferencePage* page) {
     ctx->statistics.bp_avg_query_length =
       ctx->queries->texlen / (float)(ctx->queries->count) - 2;
     destroyQueryBlock(ctx->queries);
-    if (num_bind_tex_calls > 100) {
-      cudaThreadExit();
-      num_bind_tex_calls = 0;
-      loadReference(ctx);
-    }
   }
 
   unloadReferenceString(ctx->ref);
-  unloadReferenceTree(ctx);
   lseek(ctx->queries->qfile, 0, SEEK_SET);
   return 0;
 }
