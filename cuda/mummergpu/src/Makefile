@@ -63,19 +63,19 @@ LIB       := -L$(LIBDIR) -lGL -lGLU -lcuda -L$(CUDA_DIR)/lib64 -lcudart
 
 OBJDIR := $(ROOTOBJDIR)
 
-$(OBJDIR)/%.o : $(SRCDIR)%.c
+$(OBJDIR)/%.o : %.c
 	$(CC_OMP) $(CFLAGS) -o $@ -c $<
 
-$(OBJDIR)/%.o : $(SRCDIR)%.cpp
+$(OBJDIR)/%.o : %.cpp
 	$(CXX_OMP) -o $@ -c $<
 
-$(OBJDIR)/%.o : $(SRCDIR)%.cu
+$(OBJDIR)/%.o : %.cu
 	$(NVCC_OBJ) -o $@ -c $<
 
-%.cubin : $(SRCDIR)mummergpu.cu mummergpu_kernel.cu
+%.cubin : mummergpu.cu mummergpu_kernel.cu
 	$(NVCC_OBJ) -o $(BINNAME).cubin -cubin $<
 
-%.ptx : $(SRCDIR)%.cu mummergpu_kernel.cu
+%.ptx : %.cu mummergpu_kernel.cu
 	$(NVCC_OBJ) -o $@ -ptx -Xopencc -LIST:source=on $<
 
 makedirectories:
