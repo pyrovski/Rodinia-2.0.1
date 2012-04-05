@@ -826,7 +826,7 @@ mummergpuKernel(void* match_coords,
 
         c = GETQCHAR(qrystart + qry_match_len);
       }
-    }
+    } // while(c)
 
     XPRINTF("end of string\n");
 
@@ -847,7 +847,7 @@ NEXT_SUBSTRING: {
     //XPRINTF(" following suffix link. mustmatch:%d qry_match_len:%d sl:("fNID")\n",
     //       mustmatch, qry_match_len, NID(cur));
     do {} while (0);
-  }
+  } //for(int qrystart = 0; qrystart <= last; qrystart++, result += RESULT_SPAN)
 
   return;
 }
