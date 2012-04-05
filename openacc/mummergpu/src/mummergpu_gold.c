@@ -295,6 +295,7 @@ int kernel_gold(MatchResults* results,
       
       int last = qlen - min_match_len;
       int qrystart;
+      //! @todo are these loop iterations independent?
       for (qrystart = 0; qrystart <= last; qrystart++, result += RESULT_SPAN){
 	//PixelOfNode node;
 	unsigned int node_start;
