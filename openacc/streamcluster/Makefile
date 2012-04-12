@@ -10,13 +10,15 @@ targets=$(TARGET_C) $(TARGET_G) $(TARGET_O)
 
 all: $(targets)
 
-$(TARGET_C): streamcluster_original.cpp
+sources =streamcluster_original.cpp kernel.c
+
+$(TARGET_C): $(sources)
 	$(PGCXX_LINK) -Mnoopenmp $^ -o $@
 
-$(TARGET_O): streamcluster_original.cpp
+$(TARGET_O):  $(sources)
 	$(PGCXX_LINK) -DOMP -mp -o $@ $^
 
-$(TARGET_G): streamcluster_original.cpp
+$(TARGET_G): $(sources)
 	$(OPENACC_CXX_LINK) -o $@ $^
 
 clean:

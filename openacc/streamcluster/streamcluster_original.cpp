@@ -43,62 +43,26 @@
 #include <stdio.h>
 #include <iostream>
 #include <fstream>
-#include <stdlib.h>
-#include <sys/time.h>
 #include <string.h>
 #include <assert.h>
 #include <math.h>
 #include <sys/resource.h>
 #include <limits.h>
-#ifdef OMP
-#include <omp.h>
-#endif
 
 #ifdef ENABLE_PARSEC_HOOKS
 #include <hooks.h>
 #endif
 
+#include "kernel.h"
+
 using namespace std;
 
-#define MAXNAMESIZE 1024 // max filename length
-#define SEED 1
-/* increase this to reduce probability of random error */
-/* increasing it also ups running time of "speedy" part of the code */
-/* SP = 1 seems to be fine */
-#define SP 1 // number of repetitions of speedy must be >=1
 
-/* higher ITER --> more likely to get correct # of centers */
-/* higher ITER also scales the running time almost linearly */
-#define ITER 3 // iterate ITER* k log k times; ITER >= 1
+char *switch_membership; //whether to switch membership in pgain
+char* is_center; //whether a point is a center
+int* center_table; //index table of centers
 
-//#define PRINTINFO //comment this out to disable output
-#define PROFILE // comment this out to disable instrumentation code
-//#define ENABLE_THREADS  // comment this out to disable threads
-//#define INSERT_WASTE //uncomment this to insert waste computation into dist function
-
-#define CACHE_LINE 512 // cache line in byte
-
-/* this structure represents a point */
-/* these will be passed around to avoid copying coordinates */
-typedef struct {
-  float weight;
-  float *coord;
-  long assign;  /* number of point where this one is assigned */
-  float cost;  /* cost of that assignment, weight*distance */
-} Point;
-
-/* this is the array of points */
-typedef struct {
-  long num; /* number of points; may not be N if this is a sample */
-  int dim;  /* dimensionality */
-  Point *p; /* the array itself */
-} Points;
-
-static bool *switch_membership; //whether to switch membership in pgain
-static bool* is_center; //whether a point is a center
-static int* center_table; //index table of centers
-
-static int nproc; //# of threads
+int nproc; //# of threads
 static int c, d;
 #ifdef OMP
 static int ompthreads;
@@ -115,37 +79,6 @@ double time_gain_dist;
 double time_gain_init;
 #endif 
 
-inline double gettime() {
-  struct timeval t;
-  gettimeofday(&t,NULL);
-  return (double)t.tv_sec+t.tv_usec*1e-6;
-}
-
-inline int isIdentical(float *i, float *j, int D)
-// tells whether two points of D dimensions are identical
-{
-  int a = 0;
-  int equal = 1;
-
-  while (equal && a < D) {
-    if (i[a] != j[a]) equal = 0;
-    else a++;
-  }
-  if (equal) return 1;
-  else return 0;
-
-}
-
-/* comparator for floating point numbers */
-static inline int floatcomp(const float *i, const float *j)
-{
-  float a, b;
-  a = *(float *)(i);
-  b = *(float *)(j);
-  if (a > b) return (1);
-  if (a < b) return (-1);
-  return(0);
-}
 
 /* shuffle points into random order */
 void shuffle(Points *points)
@@ -197,21 +130,6 @@ double waste(double s )
 }
 #endif
 
-/* compute Euclidean distance squared between two points */
-inline float dist(Point p1, Point p2, int dim)
-{
-  int i;
-  float result=0.0;
-  for (i=0;i<dim;i++)
-    result += (p1.coord[i] - p2.coord[i])*(p1.coord[i] - p2.coord[i]);
-#ifdef INSERT_WASTE
-  double s = waste(result);
-  result += s;
-  result -= s;
-#endif
-  return(result);
-}
-
 /* run speedy on the points, return total cost of solution */
 float pspeedy(Points *points, float z, long *kcenter, int pid, pthread_barrier_t* barrier)
 {
@@ -229,8 +147,10 @@ float pspeedy(Points *points, float z, long *kcenter, int pid, pthread_barrier_t
   if( pid == nproc-1 ) k2 = points->num;
 
   static double totalcost;
-
+  
+  #ifdef ENABLE_THREADS
   static bool open = false;
+  #endif
   static double* costs; //cost for each thread. 
   static int i;
 
@@ -287,9 +207,7 @@ float pspeedy(Points *points, float z, long *kcenter, int pid, pthread_barrier_t
 	(*kcenter)++;
 #ifdef ENABLE_THREADS
 	pthread_mutex_lock(&mutex);
-#endif
 	open = true;
-#ifdef ENABLE_THREADS
 	pthread_mutex_unlock(&mutex);
 	pthread_cond_broadcast(&cond);
 #endif
@@ -302,26 +220,22 @@ float pspeedy(Points *points, float z, long *kcenter, int pid, pthread_barrier_t
 	}
 #ifdef ENABLE_THREADS
 	pthread_barrier_wait(barrier);
-#endif
 	open = false;
-#ifdef ENABLE_THREADS
 	pthread_barrier_wait(barrier);
 #endif
       }
     }
 #ifdef ENABLE_THREADS
     pthread_mutex_lock(&mutex);
-#endif
     open = true;
-#ifdef ENABLE_THREADS
     pthread_mutex_unlock(&mutex);
     pthread_cond_broadcast(&cond);
 #endif
   }
 #ifdef ENABLE_THREADS
   pthread_barrier_wait(barrier);
-#endif
   open = false;
+#endif
   double mytotal = 0;
   for( int k = k1; k < k2; k++ )  {
     mytotal += points->p[k].cost;
@@ -363,265 +277,6 @@ float pspeedy(Points *points, float z, long *kcenter, int pid, pthread_barrier_t
 }
 
 
-/* For a given point x, find the cost of the following operation:
- * -- open a facility at x if there isn't already one there,
- * -- for points y such that the assignment distance of y exceeds dist(y, x),
- *    make y a member of x,
- * -- for facilities y such that reassigning y and all its members to x 
- *    would save cost, realize this closing and reassignment.
- * 
- * If the cost of this operation is negative (i.e., if this entire operation
- * saves cost), perform this operation and return the amount of cost saved;
- * otherwise, do nothing.
- */
-
-/* numcenters will be updated to reflect the new number of centers */
-/* z is the facility cost, x is the number of this point in the array 
-   points */
-
-//! @todo convert to C
-double pgain(long x, Points *points, double z, long int *numcenters, int pid, pthread_barrier_t* barrier)
-{
-  //  printf("pgain pthread %d begin\n",pid);
-#ifdef ENABLE_THREADS
-  pthread_barrier_wait(barrier);
-#endif
-#ifdef PROFILE
-  double t0 = gettime();
-#endif
-
-  //my block
-  long bsize = points->num/nproc;
-  long k1 = bsize * pid;
-  long k2 = k1 + bsize;
-  if( pid == nproc-1 ) k2 = points->num;
-
-  int i;
-  int number_of_centers_to_close = 0;
-
-  static double *work_mem;
-  static double gl_cost_of_opening_x;
-  static int gl_number_of_centers_to_close;
-
-  //each thread takes a block of working_mem.
-  int stride = *numcenters+2;
-  //make stride a multiple of CACHE_LINE
-  int cl = CACHE_LINE/sizeof(double);
-  if( stride % cl != 0 ) { 
-    stride = cl * ( stride / cl + 1);
-  }
-  int K = stride -2 ; // K==*numcenters
-  
-  //my own cost of opening x
-  double cost_of_opening_x = 0;
-
-  if( pid==0 )    { 
-    work_mem = (double*) malloc(stride*(nproc+1)*sizeof(double));
-    gl_cost_of_opening_x = 0;
-    gl_number_of_centers_to_close = 0;
-  }
-
-#ifdef ENABLE_THREADS
-  pthread_barrier_wait(barrier);
-#endif
-  /*For each center, we have a *lower* field that indicates 
-    how much we will save by closing the center. 
-    Each thread has its own copy of the *lower* fields as an array.
-    We first build a table to index the positions of the *lower* fields. 
-  */
-
-  int count = 0;
-  for( int i = k1; i < k2; i++ ) {
-    if( is_center[i] ) {
-      center_table[i] = count++;
-    }
-  }
-  work_mem[pid*stride] = count;
-
-#ifdef ENABLE_THREADS
-  pthread_barrier_wait(barrier);
-#endif
-
-  if( pid == 0 ) {
-    int accum = 0;
-    for( int p = 0; p < nproc; p++ ) {
-      int tmp = (int)work_mem[p*stride];
-      work_mem[p*stride] = accum;
-      accum += tmp;
-    }
-  }
-
-#ifdef ENABLE_THREADS
-  pthread_barrier_wait(barrier);
-#endif
-
-  for( int i = k1; i < k2; i++ ) {
-    if( is_center[i] ) {
-      center_table[i] += (int)work_mem[pid*stride];
-    }
-  }
-
-  //now we finish building the table. clear the working memory.
-  memset(switch_membership + k1, 0, (k2-k1)*sizeof(bool));
-  memset(work_mem+pid*stride, 0, stride*sizeof(double));
-  if( pid== 0 ) memset(work_mem+nproc*stride,0,stride*sizeof(double));
-
-#ifdef ENABLE_THREADS
-  pthread_barrier_wait(barrier);
-#endif
-#ifdef PROFILE
-  double t1 = gettime();
-  if( pid == 0 ) time_gain_init += t1-t0;
-#endif
-  //my *lower* fields
-  double* lower = &work_mem[pid*stride];
-  //global *lower* fields
-  double* gl_lower = &work_mem[nproc*stride];
-
-#ifdef OMP
-	// OpenMP parallelization
-//	#pragma omp parallel for 
-	#pragma omp parallel for reduction(+: cost_of_opening_x)
-#endif
-  for ( i = k1; i < k2; i++ ) {
-    float x_cost = dist(points->p[i], points->p[x], points->dim) 
-      * points->p[i].weight;
-    float current_cost = points->p[i].cost;
-
-    if ( x_cost < current_cost ) {
-
-      // point i would save cost just by switching to x
-      // (note that i cannot be a median, 
-      // or else dist(p[i], p[x]) would be 0)
-      
-      switch_membership[i] = 1;
-      cost_of_opening_x += x_cost - current_cost;
-
-    } else {
-
-      // cost of assigning i to x is at least current assignment cost of i
-
-      // consider the savings that i's **current** median would realize
-      // if we reassigned that median and all its members to x;
-      // note we've already accounted for the fact that the median
-      // would save z by closing; now we have to subtract from the savings
-      // the extra cost of reassigning that median and its members 
-      int assign = points->p[i].assign;
-      lower[center_table[assign]] += current_cost - x_cost;
-    }
-  }
-
-#ifdef ENABLE_THREADS
-  pthread_barrier_wait(barrier);
-#endif
-
-#ifdef PROFILE
-  double t2 = gettime();
-  if( pid==0){
-    time_gain_dist += t2 - t1;
-  }
-#endif
-
-  // at this time, we can calculate the cost of opening a center
-  // at x; if it is negative, we'll go through with opening it
-
-  for ( int i = k1; i < k2; i++ ) {
-    if( is_center[i] ) {
-      double low = z;
-      //aggregate from all threads
-      for( int p = 0; p < nproc; p++ ) {
-	low += work_mem[center_table[i]+p*stride];
-      }
-      gl_lower[center_table[i]] = low;
-      if ( low > 0 ) {
-	// i is a median, and
-	// if we were to open x (which we still may not) we'd close i
-
-	// note, we'll ignore the following quantity unless we do open x
-	++number_of_centers_to_close;  
-	cost_of_opening_x -= low;
-      }
-    }
-  }
-#ifdef ENABLE_THREADS
-  pthread_barrier_wait(barrier);
-#endif
-		
-  //use the rest of working memory to store the following
-  work_mem[pid*stride + K] = number_of_centers_to_close;
-  work_mem[pid*stride + K+1] = cost_of_opening_x;
-
-#ifdef ENABLE_THREADS
-  pthread_barrier_wait(barrier);
-#endif
-  //  printf("thread %d cost complete\n",pid); 
-
-  if( pid==0 ) {
-    gl_cost_of_opening_x = z;
-    //aggregate
-    for( int p = 0; p < nproc; p++ ) {
-      gl_number_of_centers_to_close += (int)work_mem[p*stride + K];
-      gl_cost_of_opening_x += work_mem[p*stride+K+1];
-    }
-  }
-#ifdef ENABLE_THREADS
-  pthread_barrier_wait(barrier);
-#endif
-  // Now, check whether opening x would save cost; if so, do it, and
-  // otherwise do nothing
-
-  if ( gl_cost_of_opening_x < 0 ) {
-    //  we'd save money by opening x; we'll do it
-#ifdef OMP
-	#pragma omp parallel for
-#endif
-    for ( int i = k1; i < k2; i++ ) {
-      bool close_center = gl_lower[center_table[points->p[i].assign]] > 0 ;
-      if ( switch_membership[i] || close_center ) {
-	// Either i's median (which may be i itself) is closing,
-	// or i is closer to x than to its current median
-	points->p[i].cost = points->p[i].weight *
-	  dist(points->p[i], points->p[x], points->dim);
-	points->p[i].assign = x;
-      }
-    }
-    for( int i = k1; i < k2; i++ ) {
-      if( is_center[i] && gl_lower[center_table[i]] > 0 ) {
-	is_center[i] = false;
-      }
-    }
-    if( x >= k1 && x < k2 ) {
-      is_center[x] = true;
-    }
-    //    pthread_barrier_wait(barrier);
-
-    if( pid==0 ) {
-      *numcenters = *numcenters + 1 - gl_number_of_centers_to_close;
-    }
-  }
-  else {
-    if( pid==0 )
-      gl_cost_of_opening_x = 0;  // the value we'll return
-  }
-#ifdef ENABLE_THREADS
-  pthread_barrier_wait(barrier);
-#endif
-  if( pid == 0 ) {
-    free(work_mem);
-    //    free(is_center);
-    //    free(switch_membership);
-    //    free(proc_cost_of_opening_x);
-    //    free(proc_number_of_centers_to_close);
-  }
-
-#ifdef PROFILE
-  double t3 = gettime();
-  if( pid==0 )
-  time_gain += t3-t0;
-#endif
-  return -gl_cost_of_opening_x;
-}
-
 
 /* facility location on the points using local search */
 /* z is the facility cost, returns the total cost and # of centers */
@@ -640,14 +295,12 @@ float pFL(Points *points, int *feasible, int numfeasible,
   long i;
   long x;
   double change;
-  long numberOfPoints;
 
   change = cost;
   /* continue until we run iter iterations without improvement */
   /* stop instead if improvement is less than e */
   while (change/cost > 1.0*e) {
     change = 0.0;
-    numberOfPoints = points->num;
     /* randomize order in which centers are considered */
 
     if( pid == 0 ) {
@@ -759,7 +412,6 @@ float pkmedian(Points *points, long kmin, long kmax, long* kfinal,
 {
   int i;
   double cost;
-  double lastcost;
   double hiz, loz, z;
 
   static long k;
@@ -769,7 +421,9 @@ float pkmedian(Points *points, long kmin, long kmax, long* kfinal,
 
   if( pid==0 ) hizs = (double*)calloc(nproc,sizeof(double));
   hiz = loz = 0.0;
+#ifdef PRINTINFO
   long numberOfPoints = points->num;
+#endif
   long ptDimension = points->dim;
 
   //my block
@@ -882,7 +536,6 @@ float pkmedian(Points *points, long kmin, long kmax, long* kfinal,
     /* first get a rough estimate on the FL solution */
     //    pthread_barrier_wait(barrier);
 
-    lastcost = cost;
     cost = pFL(points, feasible, numfeasible,
 	       z, &k, cost, (long)(ITER*kmax*log((double)kmax)), 0.1, pid, barrier);
 
@@ -1190,8 +843,8 @@ void streamCluster( PStream* stream,
       points.p[i].weight = 1.0;
     }
 
-    switch_membership = (bool*)malloc(points.num*sizeof(bool));
-    is_center = (bool*)calloc(points.num,sizeof(bool));
+    switch_membership = (char*)malloc(points.num*sizeof(char));
+    is_center = (char*)calloc(points.num,sizeof(char));
     center_table = (int*)malloc(points.num*sizeof(int));
 
     localSearch(&points,kmin, kmax,&kfinal);
@@ -1225,8 +878,8 @@ void streamCluster( PStream* stream,
   }
 
   //finally cluster all temp centers
-  switch_membership = (bool*)malloc(centers.num*sizeof(bool));
-  is_center = (bool*)calloc(centers.num,sizeof(bool));
+  switch_membership = (char*)malloc(centers.num*sizeof(char));
+  is_center = (char*)calloc(centers.num,sizeof(char));
   center_table = (int*)malloc(centers.num*sizeof(int));
 
   localSearch( &centers, kmin, kmax ,&kfinal );
@@ -1241,7 +894,6 @@ int main(int argc, char **argv)
   long kmin, kmax, n, chunksize, clustersize;
   int dim;
 
-	int numthreads;
 	c = 0;
 	d = 0;
 #ifdef PARSEC_VERSION
