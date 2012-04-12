@@ -1,4 +1,10 @@
-On fermi (Core i7 930 2.8 GHz):
+commit 900282de5ed35b0fd3c4c270bc76e2b08b7c9461
+On fermi (Core i7 930 2.8 GHz, GeForce GTX 480):
 4 cores openmp pgc++: 12.8s
-1 core pgi: 34.7s
+1 core pgc++: 34.7s
+
 4 cores openmp g++: 20.7s
+1 core g++: 69.4s
+
+
+CUDA: 6.37s
