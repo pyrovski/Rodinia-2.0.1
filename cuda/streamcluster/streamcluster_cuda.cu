@@ -222,9 +222,9 @@ float pgain( long x, Points *points, float z, long int *numcenters, int kmax, bo
 	   switch_membership_d	// out:  changes in membership
 		);
 	
-	cudaThreadSynchronize();
 	
 #ifdef PROFILE
+	cudaThreadSynchronize();
 	double t10 = gettime();
 	*kernel += t10 - t9;
 #endif
