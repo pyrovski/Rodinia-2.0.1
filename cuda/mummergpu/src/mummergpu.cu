@@ -1283,7 +1283,7 @@ void coordsToPrintBuffers(MatchContext* ctx,
   *nextqrychar = qrychar;
   fprintf(stderr, "Allocing %ld bytes of host memory for %d alignments\n",
           alignmentOffset * sizeof(Alignment), numAlignments);
-  *alignments = (struct Alignment *) calloc(alignmentOffset, sizeof(Alignment));
+  *alignments = (Alignment *) calloc(alignmentOffset, sizeof(Alignment));
   //cudaMallocHost((void**)alignments, numAlignments * sizeof(Alignment));
 }
 
@@ -1299,7 +1299,7 @@ void runPrintKernel(MatchContext* ctx,
   size_t matchesSize = numMatches * sizeof(MatchInfo);
   CUDA_MALLOC((void**) &d_matches, matchesSize);
 
-  struct Alignment * d_alignments;
+  Alignment * d_alignments;
   size_t alignmentSize = numAlignments * sizeof(Alignment);
   CUDA_MALLOC((void**) &d_alignments, alignmentSize);
   CUDA_SAFE_CALL(cudaMemset((void*)   d_alignments, 0, alignmentSize));
@@ -2117,8 +2117,8 @@ int streamReferenceAgainstQueries(MatchContext* ctx) {
 
 extern "C"
 int matchQueries(MatchContext* ctx) {
-  assert(sizeof(struct PixelOfNode) == sizeof(uint4));
-  assert(sizeof(struct PixelOfChildren) == sizeof(uint4));
+  assert(sizeof(PixelOfNode) == sizeof(uint4));
+  assert(sizeof(PixelOfChildren) == sizeof(uint4));
 
 #if TREE_ACCESS_HISTOGRAM
   ctx->statistics.node_hist_size = 0;
