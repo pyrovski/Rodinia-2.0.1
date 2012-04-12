@@ -72,7 +72,7 @@ using namespace std;
 #define ITER 3 // iterate ITER* k log k times; ITER >= 1
 
 //#define PRINTINFO //comment this out to disable output
-//#define PROFILE // comment this out to disable instrumentation code
+#define PROFILE // comment this out to disable instrumentation code
 //#define ENABLE_THREADS  // comment this out to disable threads
 //#define INSERT_WASTE //uncomment this to insert waste computation into dist function
 
@@ -379,6 +379,7 @@ float pspeedy(Points *points, float z, long *kcenter, int pid, pthread_barrier_t
 /* z is the facility cost, x is the number of this point in the array 
    points */
 
+//! @todo convert to C
 double pgain(long x, Points *points, double z, long int *numcenters, int pid, pthread_barrier_t* barrier)
 {
   //  printf("pgain pthread %d begin\n",pid);
