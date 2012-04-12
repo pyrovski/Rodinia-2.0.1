@@ -1,0 +1,4 @@
+On fermi (Core i7 930 2.8 GHz):
+4 cores openmp pgc++: 12.8s
+1 core pgi: 34.7s
+4 cores openmp g++: 20.7s
