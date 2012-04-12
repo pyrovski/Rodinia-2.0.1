@@ -69,10 +69,14 @@ pgain_kernel(	int num,
   extern __shared__ float coord_s[];							// shared memory for coordinate of point[x]
 
   /* coordinate mapping of point[x] to shared mem */
+  /*
   if(threadIdx.x == 0)
     for(int i=0; i<dim; i++) {
       coord_s[i] = coord_d[i*num + x];
     }
+  */
+  for(int i = threadIdx.x; i < dim; i += blockDim.x)
+    coord_s[i] = coord_d[i*num + x];
   __syncthreads();
 
   /* cost between this point and point[x]: euclidean distance multiplied by weight */
