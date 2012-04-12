@@ -1,15 +1,15 @@
 /***********************************************
 	streamcluster_cuda_header.cu
 	: header file to streamcluster
-	
+
 	- original code from PARSEC Benchmark Suite
 	- parallelization with CUDA API has been applied by
-	
+
 	Sang-Ha (a.k.a Shawn) Lee - sl4ge@virginia.edu
 	University of Virginia
 	Department of Electrical and Computer Engineering
 	Department of Computer Science
-	
+
 ***********************************************/
 
 #ifndef STREAMCLUSTER_CUDA_HEADER_CU
@@ -50,8 +50,7 @@ typedef struct {
   Point *p; /* the array itself */
 } Points;
 
-struct pkmedian_arg_t
-{
+struct pkmedian_arg_t {
   Points* points;
   long kmin;
   long kmax;
@@ -79,7 +78,7 @@ public:
     size_t count = 0;
     for( int i = 0; i < num && n > 0; i++ ) {
       for( int k = 0; k < dim; k++ ) {
-	dest[i*dim + k] = lrand48()/(float)INT_MAX;
+        dest[i*dim + k] = lrand48()/(float)INT_MAX;
       }
       n--;
       count++;
@@ -92,7 +91,7 @@ public:
   int feof() {
     return n <= 0;
   }
-  ~SimStream() { 
+  ~SimStream() {
   }
 private:
   long n;
@@ -108,7 +107,7 @@ public:
     }
   }
   size_t read( float* dest, int dim, int num ) {
-    return std::fread(dest, sizeof(float)*dim, num, fp); 
+    return std::fread(dest, sizeof(float)*dim, num, fp);
   }
   int ferror() {
     return std::ferror(fp);
