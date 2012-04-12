@@ -208,17 +208,20 @@ float pgain( long x, Points *points, float z, long int *numcenters, int kmax, bo
 #ifdef PROFILE
 	double t9 = gettime();
 #endif
-	pgain_kernel<<< grid_size, THREADS_PER_BLOCK,  smSize>>>(	
-																											num,								// in:	# of data
-																											dim,									// in:	dimension of point coordinates
-																											x,										// in:	point to open a center at
-																											p,										// out:	data point array
-																											K,										// in:	number of centers
-																											coord_d,							// in:	array of point coordinates
-																											work_mem_d,					// out:	cost and lower field array
-																											center_table_d,				// in:	center index table
-																											switch_membership_d		// out:  changes in membership
-																										  );
+	pgain_kernel
+	  <<< grid_size, THREADS_PER_BLOCK,  smSize>>>
+	  (	
+	   num,		// in:	# of data
+	   dim,			// in:	dimension of point coordinates
+	   x,			// in:	point to open a center at
+	   p,			// out:	data point array
+	   K,			// in:	number of centers
+	   coord_d,		// in:	array of point coordinates
+	   work_mem_d,		// out:	cost and lower field array
+	   center_table_d,	// in:	center index table
+	   switch_membership_d	// out:  changes in membership
+		);
+	
 	cudaThreadSynchronize();
 	
 #ifdef PROFILE
