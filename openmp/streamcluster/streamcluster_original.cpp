@@ -177,7 +177,7 @@ double waste(double s )
 #endif
 
 /* compute Euclidean distance squared between two points */
-float dist(Point p1, Point p2, int dim)
+inline float dist(Point p1, Point p2, int dim)
 {
   int i;
   float result=0.0;

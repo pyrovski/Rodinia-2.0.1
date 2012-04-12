@@ -167,7 +167,7 @@ double waste(double s )
 #endif
 
 /* compute Euclidean distance squared between two points */
-float dist(Point p1, Point p2, int dim)
+inline float dist(Point p1, Point p2, int dim)
 {
   int i;
   float result=0.0;
@@ -471,7 +471,7 @@ double pgain(long x, Points *points, double z, long int *numcenters, int pid, pt
       // would save z by closing; now we have to subtract from the savings
       // the extra cost of reassigning that median and its members 
       int assign = points->p[i].assign;
-      lower[center_table[assign]] += current_cost - x_cost;			
+      lower[center_table[assign]] += current_cost - x_cost;
     }
   }
 
