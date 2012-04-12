@@ -1,3 +1,17 @@
+/***********************************************
+	streamcluster_omp.cpp
+	: parallelized code of streamcluster using OpenMP
+	
+	- original code from PARSEC Benchmark Suite
+	- parallelization with OpenMP API has been applied by
+	
+	Sang-Ha (a.k.a Shawn) Lee - sl4ge@virginia.edu
+	University of Virginia
+	Department of Electrical and Computer Engineering
+	Department of Computer Science
+	
+***********************************************/
+
 //Copyright (c) 2006-2009 Princeton University
 //All rights reserved.
 
@@ -36,6 +50,9 @@
 #include <math.h>
 #include <sys/resource.h>
 #include <limits.h>
+#ifdef OMP
+#include <omp.h>
+#endif
 
 #ifdef ENABLE_PARSEC_HOOKS
 #include <hooks.h>
@@ -82,6 +99,10 @@ static bool* is_center; //whether a point is a center
 static int* center_table; //index table of centers
 
 static int nproc; //# of threads
+static int c, d;
+#ifdef OMP
+static int ompthreads;
+#endif
 
 // instrumentation code
 #ifdef PROFILE
@@ -456,6 +477,11 @@ double pgain(long x, Points *points, double z, long int *numcenters, int pid, pt
   //global *lower* fields
   double* gl_lower = &work_mem[nproc*stride];
 
+#ifdef OMP
+	// OpenMP parallelization
+//	#pragma omp parallel for 
+	#pragma omp parallel for reduction(+: cost_of_opening_x)
+#endif
   for ( i = k1; i < k2; i++ ) {
     float x_cost = dist(points->p[i], points->p[x], points->dim) 
       * points->p[i].weight;
@@ -516,6 +542,10 @@ double pgain(long x, Points *points, double z, long int *numcenters, int pid, pt
       }
     }
   }
+#ifdef ENABLE_THREADS
+  pthread_barrier_wait(barrier);
+#endif
+		
   //use the rest of working memory to store the following
   work_mem[pid*stride + K] = number_of_centers_to_close;
   work_mem[pid*stride + K+1] = cost_of_opening_x;
@@ -541,6 +571,9 @@ double pgain(long x, Points *points, double z, long int *numcenters, int pid, pt
 
   if ( gl_cost_of_opening_x < 0 ) {
     //  we'd save money by opening x; we'll do it
+#ifdef OMP
+	#pragma omp parallel for
+#endif
     for ( int i = k1; i < k2; i++ ) {
       bool close_center = gl_lower[center_table[points->p[i].assign]] > 0 ;
       if ( switch_membership[i] || close_center ) {
@@ -624,7 +657,10 @@ float pFL(Points *points, int *feasible, int numfeasible,
 #endif
     for (i=0;i<iter;i++) {
       x = i%numfeasible;
+			//printf("iteration %d started********\n", i);
       change += pgain(feasible[x], points, z, k, pid, barrier);
+			c++;
+			//printf("iteration %d finished @@@@@@\n", i);
     }
 
     cost -= change;
@@ -834,6 +870,7 @@ float pkmedian(Points *points, long kmin, long kmax, long* kfinal,
 #endif
 
   while(1) {
+		d++;
 #ifdef PRINTINFO
     if( pid==0 )
       {
@@ -1203,6 +1240,9 @@ int main(int argc, char **argv)
   long kmin, kmax, n, chunksize, clustersize;
   int dim;
 
+	int numthreads;
+	c = 0;
+	d = 0;
 #ifdef PARSEC_VERSION
 #define __PARSEC_STRING(x) #x
 #define __PARSEC_XSTRING(x) __PARSEC_STRING(x)
@@ -1241,7 +1281,11 @@ int main(int argc, char **argv)
   strcpy(infilename, argv[7]);
   strcpy(outfilename, argv[8]);
   nproc = atoi(argv[9]);
-
+#ifdef OMP
+	ompthreads = nproc;
+	nproc = 1;
+	omp_set_num_threads(ompthreads);
+#endif
   srand48(SEED);
   PStream* stream;
   if( n > 0 ) {
@@ -1274,6 +1318,7 @@ int main(int argc, char **argv)
   printf("time pspeedy = %lf\n", time_speedy);
   printf("time pshuffle = %lf\n", time_shuffle);
   printf("time localSearch = %lf\n", time_local_search);
+  printf("loops=%d\n", d);
  #endif
   
 #ifdef ENABLE_PARSEC_HOOKS
