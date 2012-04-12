@@ -22,7 +22,7 @@ using namespace std;
 /* increase this to reduce probability of random error */
 /* increasing it also ups running time of "speedy" part of the code */
 /* SP = 1 seems to be fine */
-#define SP 1 							// number of repetitions of speedy must be >=1
+#define SP 1 	// number of repetitions of speedy must be >=1
 
 /* higher ITER --> more likely to get correct # of centers */
 /* higher ITER also scales the running time almost linearly */
@@ -66,12 +66,6 @@ void inttofile(int data, char *filename){
 	FILE *fp = fopen(filename, "w");
 	fprintf(fp, "%d ", data);
 	fclose(fp);	
-}
-
-double gettime() {
-  struct timeval t;
-  gettimeofday(&t,NULL);
-  return t.tv_sec+t.tv_usec*1e-6;
 }
 
 int isIdentical(float *i, float *j, int D){
@@ -150,20 +144,6 @@ float waste(float s )
 }
 #endif
 
-/* compute Euclidean distance squared between two points */
-float dist(Point p1, Point p2, int dim)
-{
-  int i;
-  float result=0.0;
-  for (i=0;i<dim;i++)
-    result += (p1.coord[i] - p2.coord[i])*(p1.coord[i] - p2.coord[i]);
-#ifdef INSERT_WASTE
-  float s = waste(result);
-  result += s;
-  result -= s;
-#endif
-  return(result);
-}
 
 /* run speedy on the points, return total cost of solution */
 float pspeedy(Points *points, float z, long *kcenter, int pid, pthread_barrier_t* barrier)

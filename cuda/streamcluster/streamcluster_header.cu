@@ -34,6 +34,12 @@
 
 using namespace std;
 
+inline double gettime() {
+  struct timeval t;
+  gettimeofday(&t,NULL);
+  return t.tv_sec+t.tv_usec*1e-6;
+}
+
 /* this structure represents a point */
 /* these will be passed around to avoid copying coordinates */
 typedef struct {
@@ -124,13 +130,25 @@ private:
 };
 
 /* function prototypes */
-double gettime();
 int isIdentical(float*, float*, int);
 //static int floatcomp(const void*, const void*);
 void shuffle(Points*);
 void intshuffle(int*, int);
 float waste(float);
-float dist(Point, Point, int);
+/* compute Euclidean distance squared between two points */
+inline float dist(Point p1, Point p2, int dim)
+{
+  int i;
+  float result=0.0;
+  for (i=0;i<dim;i++)
+    result += (p1.coord[i] - p2.coord[i])*(p1.coord[i] - p2.coord[i]);
+#ifdef INSERT_WASTE
+  float s = waste(result);
+  result += s;
+  result -= s;
+#endif
+  return(result);
+}
 float pspeedy(Points*, float, long, int, pthread_barrier_t*);
 float pgain_old(long, Points*, float, long int*, int, pthread_barrier_t*);
 float pFL(Points*, int*, int, float, long*, float, long, float, int, pthread_barrier_t*);

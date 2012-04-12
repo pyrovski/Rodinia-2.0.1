@@ -115,13 +115,13 @@ double time_gain_dist;
 double time_gain_init;
 #endif 
 
-double gettime() {
+inline double gettime() {
   struct timeval t;
   gettimeofday(&t,NULL);
   return (double)t.tv_sec+t.tv_usec*1e-6;
 }
 
-int isIdentical(float *i, float *j, int D)
+inline int isIdentical(float *i, float *j, int D)
 // tells whether two points of D dimensions are identical
 {
   int a = 0;
@@ -137,7 +137,7 @@ int isIdentical(float *i, float *j, int D)
 }
 
 /* comparator for floating point numbers */
-static int floatcomp(const void *i, const void *j)
+static inline int floatcomp(const float *i, const float *j)
 {
   float a, b;
   a = *(float *)(i);

@@ -94,7 +94,7 @@ double time_gain_dist;
 double time_gain_init;
 #endif 
 
-double gettime() {
+inline double gettime() {
   struct timeval t;
   gettimeofday(&t,NULL);
   return (double)t.tv_sec+t.tv_usec*1e-6;
