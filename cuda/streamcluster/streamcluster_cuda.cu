@@ -69,12 +69,6 @@ pgain_kernel(	int num,
   extern __shared__ float coord_s[];							// shared memory for coordinate of point[x]
 
   /* coordinate mapping of point[x] to shared mem */
-  /*
-  if(threadIdx.x == 0)
-    for(int i=0; i<dim; i++) {
-      coord_s[i] = coord_d[i*num + x];
-    }
-  */
   for(int i = threadIdx.x; i < dim; i += blockDim.x)
     coord_s[i] = coord_d[i*num + x];
   __syncthreads();
@@ -194,7 +188,7 @@ float pgain( long x, Points *points, float z, long int *numcenters, int kmax, bo
   cudaMemcpy( p,  points->p,  num * sizeof(Point),  cudaMemcpyHostToDevice);
   /* initialize device memory */
   cudaMemset( switch_membership_d, 0, num 		* sizeof(bool) );
-  cudaMemset( work_mem_d, 				0, kmax * num * sizeof(float) );
+  cudaMemset( work_mem_d, 0, kmax * num * sizeof(float) );
 
 #ifdef PROFILE
   double t8 = gettime();
